@@ -1,0 +1,16 @@
+[Unit]
+Description=WebSSH web-based SSH terminal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env wssh --address=0.0.0.0 --port={{ webssh_port }}
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+
+
+

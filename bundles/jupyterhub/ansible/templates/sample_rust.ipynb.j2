@@ -1,0 +1,788 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "intro",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на Rust"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example1-title",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "example1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from Rust!\n",
+      "Welcome to Rust kernel in Jupyter.\n"
+     ]
+    }
+   ],
+   "source": [
+    "println!(\"Hello from Rust!\");\n",
+    "println!(\"Welcome to Rust kernel in Jupyter.\");\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example2-title",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "example2",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum: 42\n",
+      "Product: 405\n",
+      "Division: 0.5556\n",
+      "Power: 225\n",
+      "Square root of 15: 3.8730\n"
+     ]
+    }
+   ],
+   "source": [
+    "let a: i32 = 15;\n",
+    "let b: i32 = 27;\n",
+    "let sum = a + b;\n",
+    "let product = a * b;\n",
+    "\n",
+    "println!(\"a = {}\", a);\n",
+    "println!(\"b = {}\", b);\n",
+    "println!(\"Sum: {}\", sum);\n",
+    "println!(\"Product: {}\", product);\n",
+    "println!(\"Division: {:.4}\", a as f64 / b as f64);\n",
+    "println!(\"Power: {}\", a.pow(2));\n",
+    "println!(\"Square root of {}: {:.4}\", a, (a as f64).sqrt());\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example3-title",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа с векторами и массивами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "example3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Vector: [10, 20, 30, 40, 50]\n",
+      "Sum: 150\n",
+      "Max: 50\n",
+      "Min: 10\n",
+      "Average: 30.00\n",
+      "Even numbers: [10, 20, 30, 40, 50]\n",
+      "Squares: [100, 400, 900, 1600, 2500]\n"
+     ]
+    }
+   ],
+   "source": [
+    "let numbers: Vec<i32> = vec![10, 20, 30, 40, 50];\n",
+    "println!(\"Vector: {:?}\", numbers);\n",
+    "println!(\"Sum: {}\", numbers.iter().sum::<i32>());\n",
+    "println!(\"Max: {}\", numbers.iter().max().unwrap());\n",
+    "println!(\"Min: {}\", numbers.iter().min().unwrap());\n",
+    "println!(\"Average: {:.2}\", numbers.iter().sum::<i32>() as f64 / numbers.len() as f64);\n",
+    "\n",
+    "// Фильтрация\n",
+    "let even_numbers: Vec<i32> = numbers.iter().filter(|&&x| x % 2 == 0).copied().collect();\n",
+    "println!(\"Even numbers: {:?}\", even_numbers);\n",
+    "\n",
+    "// Преобразование (map)\n",
+    "let squares: Vec<i32> = numbers.iter().map(|x| x * x).collect();\n",
+    "println!(\"Squares: {:?}\", squares);\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example4-title",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Функции и рекурсия"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "example4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of 5 is 120\n",
+      "\n",
+      "First 10 Fibonacci numbers: 0 1 1 2 3 5 8 13 21 34 \n"
+     ]
+    }
+   ],
+   "source": [
+    "// Функция для вычисления факториала\n",
+    "fn factorial(n: u64) -> u64 {\n",
+    "    if n <= 1 {\n",
+    "        1\n",
+    "    } else {\n",
+    "        n * factorial(n - 1)\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "// Функция для вычисления чисел Фибоначчи\n",
+    "fn fibonacci(n: u32) -> u32 {\n",
+    "    if n <= 1 {\n",
+    "        n\n",
+    "    } else {\n",
+    "        fibonacci(n - 1) + fibonacci(n - 2)\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "let num: u64 = 5;\n",
+    "println!(\"Factorial of {} is {}\", num, factorial(num));\n",
+    "\n",
+    "print!(\"\\nFirst 10 Fibonacci numbers: \");\n",
+    "for i in 0..10 {\n",
+    "    print!(\"{} \", fibonacci(i));\n",
+    "}\n",
+    "println!();\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example5-title",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "b0f8ecaf-0cd3-4941-b918-7c4e59382c87",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original string: Rust Programming\n",
+      "Length: 16\n",
+      "Uppercase: RUST PROGRAMMING\n",
+      "Lowercase: rust programming\n",
+      "Greeting: Hello, Rust Programming!\n",
+      "Words: [\"Rust\", \"Programming\"]\n",
+      "String contains 'Rust'\n",
+      "Owned string: Rust Programming\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "()"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "{\n",
+    "    let name = \"Rust Programming\";\n",
+    "    println!(\"Original string: {}\", name);\n",
+    "    println!(\"Length: {}\", name.len());\n",
+    "    println!(\"Uppercase: {}\", name.to_uppercase());\n",
+    "    println!(\"Lowercase: {}\", name.to_lowercase());\n",
+    "\n",
+    "    let greeting = format!(\"Hello, {}!\", name);\n",
+    "    println!(\"Greeting: {}\", greeting);\n",
+    "\n",
+    "    // Разделение строки\n",
+    "    let words: Vec<&str> = name.split_whitespace().collect();\n",
+    "    println!(\"Words: {:?}\", words);\n",
+    "\n",
+    "    // Проверка содержимого\n",
+    "    if name.contains(\"Rust\") {\n",
+    "        println!(\"String contains 'Rust'\");\n",
+    "    }\n",
+    "\n",
+    "    // String vs &str\n",
+    "    let owned_string: String = String::from(name);\n",
+    "    println!(\"Owned string: {}\", owned_string);\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example6-title",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Структуры и методы"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "example6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "Name: Alice\n",
+      "Age: 30\n",
+      "City: Moscow\n",
+      "\n",
+      "After birthday:\n",
+      "Name: Alice\n",
+      "Age: 31\n",
+      "City: Moscow\n"
+     ]
+    }
+   ],
+   "source": [
+    "struct Person {\n",
+    "    name: String,\n",
+    "    age: u32,\n",
+    "    city: String,\n",
+    "}\n",
+    "\n",
+    "impl Person {\n",
+    "    fn new(name: String, age: u32, city: String) -> Self {\n",
+    "        Person { name, age, city }\n",
+    "    }\n",
+    "    \n",
+    "    fn display_info(&self) {\n",
+    "        println!(\"Name: {}\", self.name);\n",
+    "        println!(\"Age: {}\", self.age);\n",
+    "        println!(\"City: {}\", self.city);\n",
+    "    }\n",
+    "    \n",
+    "    fn have_birthday(&mut self) {\n",
+    "        self.age += 1;\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "let mut person = Person::new(\"Alice\".to_string(), 30, \"Moscow\".to_string());\n",
+    "println!(\"Person information:\");\n",
+    "person.display_info();\n",
+    "\n",
+    "person.have_birthday();\n",
+    "println!(\"\\nAfter birthday:\");\n",
+    "person.display_info();"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example7-title",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Enums и pattern matching"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "4ca89dce-368e-404b-ac5f-3ae0b9b0f51b",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "System is active\n",
+      "System is pending\n",
+      "System is inactive\n",
+      "Success: 42\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "()"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "enum Status {\n",
+    "    Active,\n",
+    "    Inactive,\n",
+    "    Pending,\n",
+    "}\n",
+    "\n",
+    "fn status_message(status: Status) -> &'static str {\n",
+    "    match status {\n",
+    "        Status::Active => \"System is active\",\n",
+    "        Status::Inactive => \"System is inactive\",\n",
+    "        Status::Pending => \"System is pending\",\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "// вот тут добавили явный тип\n",
+    "let statuses: Vec<Status> = vec![Status::Active, Status::Pending, Status::Inactive];\n",
+    "\n",
+    "for status in statuses {\n",
+    "    println!(\"{}\", status_message(status));\n",
+    "}\n",
+    "\n",
+    "// Enum с данными\n",
+    "enum MyResult<T, E> {\n",
+    "    Ok(T),\n",
+    "    Err(E),\n",
+    "}\n",
+    "\n",
+    "let result: MyResult<i32, &str> = MyResult::Ok(42);\n",
+    "match result {\n",
+    "    MyResult::Ok(value) => println!(\"Success: {}\", value),\n",
+    "    MyResult::Err(e) => println!(\"Error: {}\", e),\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example8-title",
+   "metadata": {},
+   "source": [
+    "## Пример 8: HashMap и коллекции"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "example8",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "  city: Moscow\n",
+      "  name: Alice\n",
+      "  age: 30\n",
+      "\n",
+      "Age: 30\n",
+      "Number of fields: 3\n"
+     ]
+    }
+   ],
+   "source": [
+    "use std::collections::HashMap;\n",
+    "\n",
+    "let mut person: HashMap<&str, String> = HashMap::new();\n",
+    "person.insert(\"name\", \"Alice\".to_string());\n",
+    "person.insert(\"age\", \"30\".to_string());\n",
+    "person.insert(\"city\", \"Moscow\".to_string());\n",
+    "\n",
+    "println!(\"Person information:\");\n",
+    "for (key, value) in &person {\n",
+    "    println!(\"  {}: {}\", key, value);\n",
+    "}\n",
+    "\n",
+    "// Получение значения\n",
+    "if let Some(age) = person.get(\"age\") {\n",
+    "    println!(\"\\nAge: {}\", age);\n",
+    "}\n",
+    "\n",
+    "// Подсчет элементов\n",
+    "println!(\"Number of fields: {}\", person.len());"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example9-title",
+   "metadata": {},
+   "source": [
+    "## Пример 9: Обработка ошибок (Result и Option)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "example9",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "First element: 1\n",
+      "No fifth element (index out of bounds)\n",
+      "Division result: 5\n",
+      "Error: Division by zero\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "()"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "// Option\n",
+    "let numbers: Vec<i32> = vec![1, 2, 3];\n",
+    "\n",
+    "match numbers.get(0) {\n",
+    "    Some(value) => println!(\"First element: {}\", value),\n",
+    "    None => println!(\"No first element\"),\n",
+    "}\n",
+    "\n",
+    "match numbers.get(5) {\n",
+    "    Some(value) => println!(\"Fifth element: {}\", value),\n",
+    "    None => println!(\"No fifth element (index out of bounds)\"),\n",
+    "}\n",
+    "\n",
+    "// Result\n",
+    "fn divide(a: f64, b: f64) -> Result<f64, String> {\n",
+    "    if b == 0.0 {\n",
+    "        Err(\"Division by zero\".to_string())\n",
+    "    } else {\n",
+    "        Ok(a / b)\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "match divide(10.0, 2.0) {\n",
+    "    Ok(result) => println!(\"Division result: {}\", result),\n",
+    "    Err(e) => println!(\"Error: {}\", e),\n",
+    "}\n",
+    "\n",
+    "match divide(10.0, 0.0) {\n",
+    "    Ok(result) => println!(\"Division result: {}\", result),\n",
+    "    Err(e) => println!(\"Error: {}\", e),\n",
+    "}\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example10-title",
+   "metadata": {},
+   "source": [
+    "## Пример 10: Итераторы"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "4d43e52b-6cfb-489b-8081-fe7e596a07eb",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Squares: [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]\n",
+      "Even numbers: [2, 4, 6, 8, 10]\n",
+      "Sum: 55\n",
+      "Average: 5.50\n",
+      "Numbers > 5 multiplied by 2: [12, 14, 16, 18, 20]\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "()"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "{\n",
+    "    let numbers = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];\n",
+    "    \n",
+    "    // Генератор списка для квадратов\n",
+    "    let squares: Vec<i32> = numbers.iter().map(|x| x * x).collect();\n",
+    "    println!(\"Squares: {:?}\", squares);\n",
+    "    \n",
+    "    // Фильтрация (только четные)\n",
+    "    let even_numbers: Vec<i32> = numbers\n",
+    "        .iter()\n",
+    "        .filter(|&&x| x % 2 == 0)\n",
+    "        .copied()\n",
+    "        .collect();\n",
+    "    println!(\"Even numbers: {:?}\", even_numbers);\n",
+    "    \n",
+    "    // Агрегация\n",
+    "    let sum: i32 = numbers.iter().sum();\n",
+    "    let avg = sum as f64 / numbers.len() as f64;\n",
+    "    println!(\"Sum: {}\", sum);\n",
+    "    println!(\"Average: {:.2}\", avg);\n",
+    "    \n",
+    "    // Цепочка операций\n",
+    "    let result: Vec<i32> = numbers\n",
+    "        .iter()\n",
+    "        .filter(|&&x| x > 5)\n",
+    "        .map(|x| x * 2)\n",
+    "        .collect();\n",
+    "    println!(\"Numbers > 5 multiplied by 2: {:?}\", result);\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example11-title",
+   "metadata": {},
+   "source": [
+    "## Пример 11: Работа с данными (serde)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "example11",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "USA      | 120\n",
+      "Japan    | 110\n",
+      "Germany  | 95\n",
+      "Canada   | 80\n",
+      "\n",
+      "Total visits: 405, average: 101.2\n"
+     ]
+    }
+   ],
+   "source": [
+    ":dep serde = { version = \"1.0\", features = [\"derive\"] }\n",
+    "\n",
+    "use serde::Deserialize;\n",
+    "\n",
+    "#[derive(Debug, Deserialize)]\n",
+    "struct Record {\n",
+    "    country: &'static str,\n",
+    "    visits: u32,\n",
+    "}\n",
+    "\n",
+    "let mut data: Vec<Record> = vec![\n",
+    "    Record { country: \"USA\", visits: 120 },\n",
+    "    Record { country: \"Canada\", visits: 80 },\n",
+    "    Record { country: \"Germany\", visits: 95 },\n",
+    "    Record { country: \"Japan\", visits: 110 },\n",
+    "];\n",
+    "\n",
+    "data.sort_by(|a, b| b.visits.cmp(&a.visits)); // по убыванию\n",
+    "\n",
+    "for rec in &data {\n",
+    "    println!(\"{:8} | {}\", rec.country, rec.visits);\n",
+    "}\n",
+    "\n",
+    "// мини-«аналитика»\n",
+    "let total: u32 = data.iter().map(|r| r.visits).sum();\n",
+    "let avg = total as f32 / data.len() as f32;\n",
+    "println!(\"\\nTotal visits: {total}, average: {avg:.1}\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example12-title",
+   "metadata": {},
+   "source": [
+    "## Пример 12: Владение (Ownership) и заимствование (Borrowing)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "e015936d-e6d9-47ff-9b08-82434f312fe0",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "s2: hello\n",
+      "The length of 'world' is 5.\n",
+      "Changed string: hello, world!\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "()"
+      ]
+     },
+     "execution_count": 19,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "{\n",
+    "    // Ownership\n",
+    "    let s1 = String::from(\"hello\");\n",
+    "    let s2 = s1; // s1 перемещается в s2\n",
+    "    // println!(\"{}\", s1); // Ошибка! s1 больше не владеет данными\n",
+    "    println!(\"s2: {}\", s2);\n",
+    "\n",
+    "    // Borrowing (ссылки)\n",
+    "    let s3 = String::from(\"world\");\n",
+    "    let len = calculate_length(&s3); // заимствование\n",
+    "    println!(\"The length of '{}' is {}.\", s3, len); // s3 все еще доступна\n",
+    "\n",
+    "    fn calculate_length(s: &String) -> usize {\n",
+    "        s.len()\n",
+    "    }\n",
+    "\n",
+    "    // Mutable borrowing\n",
+    "    let mut s4 = String::from(\"hello\");\n",
+    "    change_string(&mut s4);\n",
+    "    println!(\"Changed string: {}\", s4);\n",
+    "\n",
+    "    fn change_string(s: &mut String) {\n",
+    "        s.push_str(\", world!\");\n",
+    "    }\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example13-title",
+   "metadata": {},
+   "source": [
+    "## Пример 13: Traits (интерфейсы)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "example13",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Dog says Woof!\n",
+      "Cat says Meow!\n",
+      "The Dog says Woof!\n",
+      "The Cat says Meow!\n"
+     ]
+    }
+   ],
+   "source": [
+    "trait Animal {\n",
+    "    fn make_sound(&self) -> &'static str;\n",
+    "    fn name(&self) -> &'static str {\n",
+    "        \"Unknown\"\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "struct Dog;\n",
+    "struct Cat;\n",
+    "\n",
+    "impl Animal for Dog {\n",
+    "    fn make_sound(&self) -> &'static str {\n",
+    "        \"Woof!\"\n",
+    "    }\n",
+    "    \n",
+    "    fn name(&self) -> &'static str {\n",
+    "        \"Dog\"\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "impl Animal for Cat {\n",
+    "    fn make_sound(&self) -> &'static str {\n",
+    "        \"Meow!\"\n",
+    "    }\n",
+    "    \n",
+    "    fn name(&self) -> &'static str {\n",
+    "        \"Cat\"\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "let dog = Dog;\n",
+    "let cat = Cat;\n",
+    "\n",
+    "println!(\"{} says {}\", dog.name(), dog.make_sound());\n",
+    "println!(\"{} says {}\", cat.name(), cat.make_sound());\n",
+    "\n",
+    "// Функция, принимающая trait\n",
+    "fn animal_info(animal: &dyn Animal) {\n",
+    "    println!(\"The {} says {}\", animal.name(), animal.make_sound());\n",
+    "}\n",
+    "\n",
+    "animal_info(&dog);\n",
+    "animal_info(&cat);"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5d0f15b6-e8f4-4b6f-a9aa-92f73fbeb3b5",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6fc68406-0ea5-4eb3-b1d6-06b53df9c77d",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Rust (evcxr)",
+   "language": "rust",
+   "name": "evcxr_jupyter"
+  },
+  "language_info": {
+   "codemirror_mode": "rust",
+   "file_extension": ".rs",
+   "mimetype": "text/rust",
+   "name": "Rust",
+   "pygment_lexer": "rust",
+   "version": ""
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

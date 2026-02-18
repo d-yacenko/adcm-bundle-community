@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""
+Jupyter kernel for FORTRAN (gfortran).
+Compiles and executes FORTRAN code using gfortran.
+"""
+import json
+import os
+import sys
+import tempfile
+import subprocess
+import shutil
+
+class FortranKernel:
+    def __init__(self):
+        self.temp_dir = None
+
+    def execute_code(self, code):
+        """Execute FORTRAN code."""
+        # Create temporary directory for this execution
+        self.temp_dir = tempfile.mkdtemp(prefix='fortran_kernel_')
+        
+        try:
+            # Write FORTRAN code to file
+            fortran_file = os.path.join(self.temp_dir, 'program.f90')
+            with open(fortran_file, 'w', encoding='utf-8') as f:
+                f.write(code)
+            
+            # Compile FORTRAN code
+            compile_cmd = ['gfortran', '-O2', '-o', 'program', fortran_file]
+            compile_result = subprocess.run(
+                compile_cmd,
+                cwd=self.temp_dir,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            if compile_result.returncode != 0:
+                error_output = compile_result.stderr or compile_result.stdout
+                if not error_output:
+                    error_output = 'Compilation failed with no output'
+                return {
+                    'status': 'error',
+                    'output': error_output
+                }
+            
+            # Execute compiled program
+            exec_file = os.path.join(self.temp_dir, 'program')
+            if not os.path.exists(exec_file):
+                return {
+                    'status': 'error',
+                    'output': 'Compilation succeeded but executable not found'
+                }
+            
+            exec_result = subprocess.run(
+                [exec_file],
+                cwd=self.temp_dir,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            output = exec_result.stdout
+            if exec_result.stderr:
+                output += '\n' + exec_result.stderr
+            
+            # Ensure output is not None
+            if output is None:
+                output = ''
+            
+            return {
+                'status': 'ok' if exec_result.returncode == 0 else 'error',
+                'output': output,
+                'return_code': exec_result.returncode
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                'status': 'error',
+                'output': 'Execution timeout (30 seconds)'
+            }
+        except Exception as e:
+            return {
+                'status': 'error',
+                'output': f'Error: {str(e)}'
+            }
+        finally:
+            # Cleanup
+            if self.temp_dir and os.path.exists(self.temp_dir):
+                try:
+                    shutil.rmtree(self.temp_dir)
+                except:
+                    pass
+
+from ipykernel.kernelbase import Kernel
+from ipykernel.kernelapp import IPKernelApp
+
+class FortranKernelImpl(Kernel):
+    implementation = 'FORTRAN'
+    implementation_version = '1.0'
+    language = 'fortran'
+    language_version = 'GNU'
+    language_info = {
+        'name': 'fortran',
+        'mimetype': 'text/x-fortran',
+        'file_extension': '.f90',
+    }
+    banner = "FORTRAN (gfortran) kernel"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.fortran = FortranKernel()
+
+    def do_execute(self, code, silent, store_history=True,
+                 user_expressions=None, allow_stdin=False):
+        # Increment execution count
+        self.execution_count += 1
+        
+        if not code.strip():
+            return {
+                'status': 'ok',
+                'execution_count': self.execution_count,
+                'payload': [],
+                'user_expressions': {},
+            }
+        
+        try:
+            result = self.fortran.execute_code(code)
+            
+            # Ensure result has required fields
+            if 'status' not in result:
+                result['status'] = 'error'
+            if 'output' not in result:
+                result['output'] = ''
+            
+            if not silent:
+                if result['status'] == 'ok':
+                    stream_content = {'name': 'stdout', 'text': result['output']}
+                    self.send_response(self.iopub_socket, 'stream', stream_content)
+                else:
+                    stream_content = {'name': 'stderr', 'text': result['output']}
+                    self.send_response(self.iopub_socket, 'stream', stream_content)
+            
+            return {
+                'status': result['status'],
+                'execution_count': self.execution_count,
+                'payload': [],
+                'user_expressions': {},
+            }
+        except Exception as e:
+            error_msg = f'Kernel error: {str(e)}'
+            if not silent:
+                stream_content = {'name': 'stderr', 'text': error_msg}
+                self.send_response(self.iopub_socket, 'stream', stream_content)
+            return {
+                'status': 'error',
+                'execution_count': self.execution_count,
+                'payload': [],
+                'user_expressions': {},
+            }
+
+if __name__ == '__main__':
+    IPKernelApp.launch_instance(kernel_class=FortranKernelImpl)
+

@@ -1,0 +1,30 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    port: "{{ services.jupyterhub.config.bind_port  }}"
+    base_url: "{{ services.jupyterhub.config.base_url }}"
+    systemd_unit: "{{ services.jupyterhub.config.systemd_unit }}"
+    public_host: "{{ services.jupyterhub.config.bind_host | default('127.0.0.1') }}"
+    url: "http://{{ public_host }}:{{ port }}{{ base_url }}/hub/health"
+  tasks:
+    - name: Dump dict as JSON
+      debug:
+        msg: "{{ services.jupyterhub.config | default({}) | to_nice_json }}"
+
+    - name: Check systemd unit is active
+      shell: "systemctl is-active {{ systemd_unit }}"
+      register: svc
+      changed_when: false
+      failed_when: svc.stdout.strip() != 'active'
+
+    - name: Check HTTP health endpoint
+      uri:
+        url: "{{ url }}"
+        method: GET
+        return_content: no
+        status_code: [200, 302]
+      register: http
+      changed_when: false
+

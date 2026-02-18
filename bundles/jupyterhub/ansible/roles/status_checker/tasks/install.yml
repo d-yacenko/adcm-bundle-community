@@ -1,0 +1,82 @@
+---
+- name: Debug incoming vars
+  debug:
+    msg:
+      passed_service_name: "{{ service_name | default('—', true) }}"
+      passed_component_id: "{{ component_id | default('—', true) }}"
+      passed_host_id: "{{ host_id | default('—', true) }}"
+
+- name: Ensure base directory for dedicated checkers exists
+  ansible.builtin.file:
+    path: /usr/lib/adcm-status-checker
+    state: directory
+    mode: '0755'
+
+- name: Define checker paths
+  set_fact:
+    checker_script_path: "/usr/lib/adcm-status-checker/checker-{{ component_id }}.sh"
+    checker_unit_name: "adcm-status-checker-{{ component_id }}"
+    checker_unit_path: "/etc/systemd/system/adcm-status-checker-{{ component_id }}.service"
+
+
+- name: Install dedicated checker script
+  template:
+    src: adcm-status-checker.sh.j2
+    dest: "{{ checker_script_path }}"
+    mode: '0755'
+# Поэтому делаем вручную в 4-е подхода
+# рендерим шаблон ЛОКАЛЬНО (на контроллере)
+# - name: Render checker script via lookup(template)
+#   set_fact:
+#     _checker_script: "{{ lookup('template', role_path + '/templates/adcm-status-checker.sh.j2') }}"
+
+# # (опционально) проверим, что что-то отрендерилось
+# - name: Debug rendered script length
+#   debug:
+#     msg: "Rendered checker script length: {{ _checker_script | length }}"
+
+# # пишем скрипт на удалённый хост как контент
+# - name: Install checker script (copy content)
+#   copy:
+#     dest: "{{ checker_script_path }}"
+#     mode: '0755'
+#     content: "{{ _checker_script }}"
+
+# # верификация синтаксиса bash на удалённом хосте
+# - name: Validate checker script syntax
+#   shell: "bash -n {{ checker_script_path }}"
+#   changed_when: false
+
+- name: Install dedicated checker unit
+  template:
+    src: adcm-status-checker.service.j2
+    dest: "{{ checker_unit_path }}"
+    mode: '0644'
+# Поэтому делаем вручную в 3-и подхода
+# рендерим шаблон ЛОКАЛЬНО (на контроллере)
+# - name: Render checker script via lookup(template)
+#   set_fact:
+#     _checker_script: "{{ lookup('template', role_path + '/templates/adcm-status-checker.service.j2') }}"
+
+# # (опционально) проверим, что что-то отрендерилось
+# - name: Debug rendered script length
+#   debug:
+#     msg: "Rendered checker script length: {{ _checker_script | length }}"
+
+# # пишем скрипт на удалённый хост как контент
+# - name: Install checker script (copy content)
+#   copy:
+#     dest: "{{ checker_unit_path }}"
+#     mode: '0755'
+#     content: "{{ _checker_script }}"
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Ensure dedicated ADCM status checker is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ checker_unit_name }}"
+    enabled: yes
+    state: started
+

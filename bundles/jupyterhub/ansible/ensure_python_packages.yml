@@ -1,0 +1,35 @@
+# ansible/ensure_python_packages.yml
+---
+- name: Ensure Python packages present
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Fail if no packages provided
+      ansible.builtin.fail:
+        msg: "No packages provided (job.config.packages is empty)."
+      when: (job.config.packages | default([], true)) | length == 0
+
+    - name: Install packages into venv (computed inline)
+      ansible.builtin.pip:
+        name: "{{ job.config.packages | default([], true) }}"
+        state: present
+        executable: >-
+          {{
+            (
+              (
+                (job.config.venv | default('', true))
+                or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+                or '/opt/jupyterhub/venv'
+              ) ~ '/bin/pip'
+            )
+          }}
+

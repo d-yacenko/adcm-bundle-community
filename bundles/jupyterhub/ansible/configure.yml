@@ -1,0 +1,46 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    venv_dir: "{{ services.jupyterhub.config.venv_dir }}"
+    root_dir: "{{ services.jupyterhub.config.root_dir }}"
+    data_dir: "{{ services.jupyterhub.config.data_dir }}"
+    bind_host: "{{ services.jupyterhub.config.bind_host | default('') }}"
+    bind_port: "{{ services.jupyterhub.config.bind_port }}"
+    base_url: "{{ services.jupyterhub.config.base_url }}"
+    spawner_cmd: "{{ services.jupyterhub.config.spawner_cmd }}"
+    env_path: "{{ services.jupyterhub.config.env_path }}"
+    pam_service: "{{ services.jupyterhub.config.pam_service }}"
+    allow_all: "{{ services.jupyterhub.config.allow_all }}"
+    admin_users: "{{ services.jupyterhub.config.admin_users }}"
+    systemd_unit: "{{ services.jupyterhub.config.systemd_unit }}"
+    service_user: "{{ services.jupyterhub.config.service_user | default('root') | trim }}"
+
+  tasks:
+    - name: Ensure root_dir and data_dir exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ root_dir }}"
+        - "{{ data_dir }}"
+
+    - name: Render JupyterHub config
+      template:
+        src: jupyterhub_config.py.j2
+        dest: "{{ root_dir }}/jupyterhub_config.py"
+        mode: '0644'
+
+    - name: Render systemd unit
+      template:
+        src: jupyterhub.service.j2
+        dest: "/etc/systemd/system/{{ systemd_unit }}.service"
+        mode: '0644'
+
+    - name: Reload systemd
+      become: true
+      systemd:
+        daemon_reload: yes
+      changed_when: false

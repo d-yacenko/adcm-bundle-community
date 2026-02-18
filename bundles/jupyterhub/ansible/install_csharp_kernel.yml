@@ -1,0 +1,166 @@
+# ansible/install_csharp_kernel.yml
+---
+- name: Install C# (dotnet-interactive) kernel into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      ansible.builtin.fail:
+        msg: "install_csharp_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Determine dotnet tools directory
+      set_fact:
+        dotnet_tools_dir: >-
+          {{
+            (
+              (job.config.dotnet_tools_dir | default('', true) | trim)
+              or '/opt/jupyterhub/dotnet-tools'
+            ) | string
+          }}
+
+    - name: Derive runtime variables
+      set_fact:
+        hub_bin_dir: "{{ hub_venv_dir.rstrip('/') }}/bin"
+        hub_kernels_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels"
+        dotnet_packages_source: "{{ (job.config.dotnet_feed | default('https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb', true) | trim) or 'https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb' }}"
+        dotnet_sdk_version: "{{ (job.config.dotnet_sdk | default('dotnet-sdk-8.0', true) | trim) or 'dotnet-sdk-8.0' }}"
+        kernel_display_name: "{{ (job.config.kernel_display_name | default('C# (.NET Interactive)', true) | trim) or 'C# (.NET Interactive)' }}"
+        kernel_id: "{{ (job.config.kernel_id | default('csharp-interactive', true) | trim) or 'csharp-interactive' }}"
+        dotnet_tool_version: "{{ (job.config.dotnet_tool_version | default('1.0.506202', true) | trim) or '1.0.506202' }}"
+        dotnet_interactive_binary: "{{ dotnet_tools_dir.rstrip('/') }}/dotnet-interactive"
+
+    - name: Ensure dotnet tools directory exists
+      ansible.builtin.file:
+        path: "{{ dotnet_tools_dir }}"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: Install Microsoft package feed if required
+      ansible.builtin.apt:
+        deb: "{{ dotnet_packages_source }}"
+      register: apt_repo_install
+      when: dotnet_packages_source | regex_search('\.deb$')
+
+    - name: Ensure apt cache updated after adding feed
+      ansible.builtin.apt:
+        update_cache: true
+      when: apt_repo_install is changed
+
+    - name: Install .NET SDK
+      ansible.builtin.apt:
+        name: "{{ dotnet_sdk_version }}"
+        state: present
+        update_cache: true
+
+    - name: Install dotnet-interactive tool
+      ansible.builtin.command:
+        argv:
+          - dotnet
+          - tool
+          - install
+          - "--tool-path"
+          - "{{ dotnet_tools_dir }}"
+          - Microsoft.dotnet-interactive
+          - "--version"
+          - "{{ dotnet_tool_version }}"
+      environment:
+        PATH: "{{ dotnet_tools_dir }}:/usr/local/bin:/usr/bin:/bin"
+      args:
+        creates: "{{ dotnet_interactive_binary }}"
+
+    - name: Install dotnet-interactive jupyter kernel
+      ansible.builtin.command:
+        argv:
+          - "{{ dotnet_interactive_binary }}"
+          - jupyter
+          - install
+          - "--path"
+          - "{{ hub_kernels_dir }}"
+      environment:
+        PATH: "{{ dotnet_tools_dir }}:/usr/local/bin:/usr/bin:/bin"
+
+    - name: Rename kernel directory to configured id
+      command: >
+        mv "{{ hub_kernels_dir }}/.net-csharp"
+        "{{ hub_kernels_dir }}/{{ kernel_id }}"
+      args:
+        creates: "{{ hub_kernels_dir }}/{{ kernel_id }}"
+      when: kernel_id != '.net-csharp'
+
+    - name: Update kernel.json display name if needed
+      copy:
+        dest: "{{ hub_kernels_dir }}/{{ kernel_id }}/kernel.json"
+        mode: "0644"
+        content: "{{ kernel_spec | to_nice_json }}"
+      vars:
+        kernel_spec:
+          argv:
+            - "{{ dotnet_interactive_binary }}"
+            - "jupyter"
+            - "{connection_file}"
+          display_name: "{{ kernel_display_name }}"
+          language: "C#"
+
+    - name: Ensure kernel directory is world-readable
+      file:
+        path: "{{ hub_kernels_dir }}/{{ kernel_id }}"
+        mode: "0755"
+        recurse: true
+
+    - name: Show resulting kernel info
+      debug:
+        msg:
+          hub_venv_dir: "{{ hub_venv_dir }}"
+          dotnet_sdk_version: "{{ dotnet_sdk_version }}"
+          kernel_id: "{{ kernel_id }}"
+          kernel_display_name: "{{ kernel_display_name }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_csharp.ipynb.j2
+        dest: "{{ admin_home }}/sample_csharp.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

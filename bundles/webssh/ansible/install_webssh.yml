@@ -1,0 +1,64 @@
+---
+- hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    webssh_port: "{{ services.webssh.config.port }}"
+    webssh_service: "{{ services.webssh.config.systemd_unit }}"
+  tasks:
+    - name: Wait until apt/dpkg locks are free
+      shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+              fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+              fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
+          sleep 5
+        done
+      changed_when: false
+
+    - name: Ensure prerequisites are present (Python, pip)
+      apt:
+        name:
+          - python3
+          - python3-pip
+        state: present
+        update_cache: yes
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Install WebSSH Python package via pip
+      pip:
+        name: webssh
+        state: present
+        executable: pip3
+
+    - name: Create systemd unit for WebSSH
+      template:
+        src: webssh.service.j2
+        dest: "/etc/systemd/system/{{ webssh_service }}.service"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start WebSSH service
+      systemd:
+        name: "{{ webssh_service }}"
+        state: started
+        enabled: yes
+
+    - name: Install and start ADCM status checker for WebSSH
+      include_role:
+        name: status_checker
+        tasks_from: install.yml
+      vars:
+        checker_type: services
+        service_name: "{{ webssh_service }}"
+        adcm_connection_string: "{{ adcm.config.global.adcm_url }}"
+        component_id: "{{ services.webssh.TTY.component_id }}"
+        host_id: "{{ adcm_hostid }}"
+        token: "{{ env.status_api_token }}"
+
+

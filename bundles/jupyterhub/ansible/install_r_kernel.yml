@@ -1,0 +1,153 @@
+# ansible/install_r_kernel.yml
+---
+- name: Install R (IRkernel) into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      ansible.builtin.fail:
+        msg: "install_r_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Derive runtime variables
+      set_fact:
+        hub_bin_dir: "{{ hub_venv_dir.rstrip('/') }}/bin"
+        hub_python: "{{ hub_venv_dir.rstrip('/') }}/bin/python3"
+        hub_jupyter: "{{ hub_venv_dir.rstrip('/') }}/bin/jupyter"
+        hub_kernels_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels"
+        r_kernel_id: >-
+          {{
+            (job.config.kernel_id | default('ir', true) | trim)
+            or 'ir'
+          }}
+        r_kernel_display_name: >-
+          {{
+            (job.config.kernel_display_name | default('R (IRkernel)', true) | trim)
+            or 'R (IRkernel)'
+          }}
+        cran_repo: >-
+          {{
+            (job.config.cran_repo | default('https://cloud.r-project.org', true) | trim)
+            or 'https://cloud.r-project.org'
+          }}
+        r_extra_packages: "{{ job.config.r_packages | default(['dplyr','ggplot2','tidyr','tibble'], true) }}"
+        r_apt_packages_raw: "{{ job.config.apt_packages | default([], true) }}"
+
+    - name: Normalize apt packages list
+      set_fact:
+        r_apt_packages: >-
+          {{
+            (r_apt_packages_raw if (r_apt_packages_raw is iterable and (r_apt_packages_raw | length) > 0)
+             else [
+               'r-base',
+               'r-base-dev',
+               'libcurl4-openssl-dev',
+               'libssl-dev',
+               'libxml2-dev'
+             ])
+          }}
+
+    - name: Ensure hub python exists
+      ansible.builtin.stat:
+        path: "{{ hub_python }}"
+      register: hub_python_stat
+
+    - name: Fail if hub python missing
+      ansible.builtin.fail:
+        msg: "Python interpreter {{ hub_python }} not found. Ensure JupyterHub venv exists."
+      when: not hub_python_stat.stat.exists
+
+    - name: Install required apt packages for R kernel
+      ansible.builtin.apt:
+        name: "{{ r_apt_packages }}"
+        state: present
+        update_cache: true
+
+    - name: Build R package vector string
+      set_fact:
+        r_packages_vector: "{{ r_extra_packages | map('regex_replace', '^(.*)$', \"'\\1'\") | join(', ') }}"
+      when: r_extra_packages | length > 0
+
+    - name: Install requested R packages
+      command: >
+        Rscript -e "options(repos='{{ cran_repo }}');
+        options(Ncpus=parallel::detectCores());
+        install.packages(c({{ r_packages_vector }}), dependencies=c('Depends', 'Imports'))"
+      when: r_extra_packages | length > 0
+
+    - name: Install IRkernel package inside system R
+      command: >
+        Rscript -e "options(repos='{{ cran_repo }}');
+        options(Ncpus=parallel::detectCores());
+        install.packages(c('IRkernel'), dependencies=c('Depends', 'Imports'))"
+      args:
+        creates: "/usr/local/lib/R/site-library/IRkernel"
+
+    - name: Install IRkernel spec into JupyterHub venv
+      command: >
+        Rscript -e "IRkernel::installspec(name='{{ r_kernel_id }}',
+        displayname='{{ r_kernel_display_name }}',
+        user=FALSE, prefix='{{ hub_venv_dir }}')"
+      environment:
+        PATH: "{{ hub_bin_dir }}:/usr/local/bin:/usr/bin:/bin"
+
+    - name: Ensure resulting kernel directory exists
+      ansible.builtin.file:
+        path: "{{ hub_kernels_dir }}/{{ r_kernel_id }}"
+        state: directory
+        mode: "0755"
+
+    - name: Show resulting kernel info
+      debug:
+        msg:
+          hub_venv_dir: "{{ hub_venv_dir }}"
+          cran_repo: "{{ cran_repo }}"
+          kernel_id: "{{ r_kernel_id }}"
+          kernel_display: "{{ r_kernel_display_name }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_r.ipynb.j2
+        dest: "{{ admin_home }}/sample_r.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

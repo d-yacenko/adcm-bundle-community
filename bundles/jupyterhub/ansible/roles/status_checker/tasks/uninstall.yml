@@ -1,0 +1,34 @@
+---
+- name: Define checker paths
+  set_fact:
+    checker_script_path: "/usr/lib/adcm-status-checker/checker-{{ component_id }}.sh"
+    checker_unit_name: "adcm-status-checker-{{ component_id }}"
+    checker_unit_path: "/etc/systemd/system/adcm-status-checker-{{ component_id }}.service"
+
+- name: Stop dedicated status checker (best-effort)
+  ansible.builtin.systemd:
+    name: "{{ checker_unit_name }}"
+    state: stopped
+  ignore_errors: yes
+
+- name: Disable dedicated status checker (best-effort)
+  ansible.builtin.systemd:
+    name: "{{ checker_unit_name }}"
+    enabled: no
+  ignore_errors: yes
+
+- name: Remove checker unit file
+  ansible.builtin.file:
+    path: "{{ checker_unit_path }}"
+    state: absent
+
+- name: Remove checker script file
+  ansible.builtin.file:
+    path: "{{ checker_script_path }}"
+    state: absent
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  changed_when: false
+

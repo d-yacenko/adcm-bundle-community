@@ -1,0 +1,880 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "intro",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на Scala"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example1-title",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "example1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from Scala!\n",
+      "Welcome to Scala kernel in Jupyter.\n",
+      "Scala version: version 2.13.17\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[32mimport \u001b[39m\u001b[36mscala.util.Properties\u001b[39m"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import scala.util.Properties\n",
+    "\n",
+    "println(\"Hello from Scala!\")\n",
+    "println(\"Welcome to Scala kernel in Jupyter.\")\n",
+    "println(s\"Scala version: ${Properties.versionString}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example2-title",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "example2",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum: 42\n",
+      "Product: 405\n",
+      "Division: 0.5555555555555556\n",
+      "Power: 225.0\n",
+      "Square root of 15: 3.872983346207417\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[36ma\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m15\u001b[39m\n",
+       "\u001b[36mb\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m27\u001b[39m\n",
+       "\u001b[36msum\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m42\u001b[39m\n",
+       "\u001b[36mproduct\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m405\u001b[39m"
+      ]
+     },
+     "execution_count": 1,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "val a = 15\n",
+    "val b = 27\n",
+    "val sum = a + b\n",
+    "val product = a * b\n",
+    "\n",
+    "println(s\"a = $a\")\n",
+    "println(s\"b = $b\")\n",
+    "println(s\"Sum: $sum\")\n",
+    "println(s\"Product: $product\")\n",
+    "println(s\"Division: ${a.toDouble / b}\")\n",
+    "println(s\"Power: ${math.pow(a, 2)}\")\n",
+    "println(s\"Square root of $a: ${math.sqrt(a)}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example3-title",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа со списками и коллекциями"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "example3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original list: List(10, 20, 30, 40, 50)\n",
+      "Squared numbers: List(100, 400, 900, 1600, 2500)\n",
+      "Sum of list elements: 150\n",
+      "Numbers greater than 25: List(30, 40, 50)\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[36mnumbers\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mList\u001b[39m(\u001b[32m10\u001b[39m, \u001b[32m20\u001b[39m, \u001b[32m30\u001b[39m, \u001b[32m40\u001b[39m, \u001b[32m50\u001b[39m)\n",
+       "\u001b[36msquared\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mList\u001b[39m(\u001b[32m100\u001b[39m, \u001b[32m400\u001b[39m, \u001b[32m900\u001b[39m, \u001b[32m1600\u001b[39m, \u001b[32m2500\u001b[39m)\n",
+       "\u001b[36msum\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m150\u001b[39m\n",
+       "\u001b[36mfiltered\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mList\u001b[39m(\u001b[32m30\u001b[39m, \u001b[32m40\u001b[39m, \u001b[32m50\u001b[39m)"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "val numbers = List(10, 20, 30, 40, 50)\n",
+    "println(s\"Original list: $numbers\")\n",
+    "\n",
+    "val squared = numbers.map(x => x * x)\n",
+    "println(s\"Squared numbers: $squared\")\n",
+    "\n",
+    "val sum = numbers.sum\n",
+    "println(s\"Sum of list elements: $sum\")\n",
+    "\n",
+    "val filtered = numbers.filter(_ > 25)\n",
+    "println(s\"Numbers greater than 25: $filtered\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example4-title",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Функции и рекурсия"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "example4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of 5 is 120\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "defined \u001b[32mfunction\u001b[39m \u001b[36mfactorial\u001b[39m\n",
+       "\u001b[36mnum\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m5\u001b[39m\n",
+       "\u001b[36mresult\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m120\u001b[39m"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "def factorial(n: Int): Int = {\n",
+    "  if (n == 0 || n == 1) 1\n",
+    "  else n * factorial(n - 1)\n",
+    "}\n",
+    "\n",
+    "val num = 5\n",
+    "val result = factorial(num)\n",
+    "println(s\"Factorial of $num is $result\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example5-title",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "example5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello, Scala!\n",
+      "Length of greeting: 13\n",
+      "Uppercase: HELLO, SCALA!\n",
+      "Lowercase: hello, scala!\n",
+      "Words: Hello,, Scala!\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[36muserName\u001b[39m: \u001b[32mString\u001b[39m = \u001b[32m\"Scala\"\u001b[39m\n",
+       "\u001b[36mgreeting\u001b[39m: \u001b[32mString\u001b[39m = \u001b[32m\"Hello, Scala!\"\u001b[39m\n",
+       "\u001b[36mwords\u001b[39m: \u001b[32mArray\u001b[39m[\u001b[32mString\u001b[39m] = \u001b[33mArray\u001b[39m(\u001b[32m\"Hello,\"\u001b[39m, \u001b[32m\"Scala!\"\u001b[39m)"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "val userName = \"Scala\"\n",
+    "val greeting = s\"Hello, $userName!\"\n",
+    "println(greeting)\n",
+    "println(s\"Length of greeting: ${greeting.length}\")\n",
+    "println(s\"Uppercase: ${greeting.toUpperCase}\")\n",
+    "println(s\"Lowercase: ${greeting.toLowerCase}\")\n",
+    "\n",
+    "val words = greeting.split(\" \")\n",
+    "println(s\"Words: ${words.mkString(\", \")}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example6-title",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Классы и объекты"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "example6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "My dog's name is Buddy and he is a Golden Retriever.\n",
+      "Buddy says Woof!\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "defined \u001b[32mclass\u001b[39m \u001b[36mDog\u001b[39m\n",
+       "\u001b[36mmyDog\u001b[39m: \u001b[32mDog\u001b[39m = ammonite.$sess.cmd5$Helper$Dog@420c7f8e"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "class Dog(val name: String, val breed: String) {\n",
+    "  def bark(): String = s\"$name says Woof!\"\n",
+    "}\n",
+    "\n",
+    "val myDog = new Dog(\"Buddy\", \"Golden Retriever\")\n",
+    "println(s\"My dog's name is ${myDog.name} and he is a ${myDog.breed}.\")\n",
+    "println(myDog.bark())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example7-title",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Case классы и pattern matching"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "example7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Rex is a friendly dog\n",
+      "Whiskers is an independent cat\n",
+      "Tweety is a flying bird\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "defined \u001b[32mtrait\u001b[39m \u001b[36mAnimal\u001b[39m\n",
+       "defined \u001b[32mclass\u001b[39m \u001b[36mDog\u001b[39m\n",
+       "defined \u001b[32mclass\u001b[39m \u001b[36mCat\u001b[39m\n",
+       "defined \u001b[32mclass\u001b[39m \u001b[36mBird\u001b[39m\n",
+       "defined \u001b[32mfunction\u001b[39m \u001b[36mdescribe\u001b[39m\n",
+       "\u001b[36mpets\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mProduct\u001b[39m with \u001b[32mAnimal\u001b[39m with \u001b[32mSerializable\u001b[39m] = \u001b[33mList\u001b[39m(\n",
+       "  \u001b[33mDog\u001b[39m(name = \u001b[32m\"Rex\"\u001b[39m),\n",
+       "  \u001b[33mCat\u001b[39m(name = \u001b[32m\"Whiskers\"\u001b[39m),\n",
+       "  \u001b[33mBird\u001b[39m(name = \u001b[32m\"Tweety\"\u001b[39m)\n",
+       ")"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "sealed trait Animal\n",
+    "case class Dog(name: String) extends Animal\n",
+    "case class Cat(name: String) extends Animal\n",
+    "case class Bird(name: String) extends Animal\n",
+    "\n",
+    "def describe(animal: Animal): String = animal match {\n",
+    "  case Dog(name) => s\"$name is a friendly dog\"\n",
+    "  case Cat(name) => s\"$name is an independent cat\"\n",
+    "  case Bird(name) => s\"$name is a flying bird\"\n",
+    "}\n",
+    "\n",
+    "val pets = List(Dog(\"Rex\"), Cat(\"Whiskers\"), Bird(\"Tweety\"))\n",
+    "pets.foreach(pet => println(describe(pet)))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example8-title",
+   "metadata": {},
+   "source": [
+    "## Пример 8: Работа с Map и Set"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "example8",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Student info: Map(name -> Alice, age -> 20, major -> Computer Science)\n",
+      "Name: Alice\n",
+      "Updated age: 21\n",
+      "Unique numbers: HashSet(5, 1, 2, 3, 4)\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[36mstudent\u001b[39m: \u001b[32mMap\u001b[39m[\u001b[32mString\u001b[39m, \u001b[32mAny\u001b[39m] = \u001b[33mMap\u001b[39m(\n",
+       "  \u001b[32m\"name\"\u001b[39m -> \u001b[32m\"Alice\"\u001b[39m,\n",
+       "  \u001b[32m\"age\"\u001b[39m -> \u001b[32m20\u001b[39m,\n",
+       "  \u001b[32m\"major\"\u001b[39m -> \u001b[32m\"Computer Science\"\u001b[39m\n",
+       ")\n",
+       "\u001b[36mupdatedStudent\u001b[39m: \u001b[32mMap\u001b[39m[\u001b[32mString\u001b[39m, \u001b[32mAny\u001b[39m] = \u001b[33mMap\u001b[39m(\n",
+       "  \u001b[32m\"name\"\u001b[39m -> \u001b[32m\"Alice\"\u001b[39m,\n",
+       "  \u001b[32m\"age\"\u001b[39m -> \u001b[32m21\u001b[39m,\n",
+       "  \u001b[32m\"major\"\u001b[39m -> \u001b[32m\"Computer Science\"\u001b[39m\n",
+       ")\n",
+       "\u001b[36muniqueNumbers\u001b[39m: \u001b[32mSet\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mHashSet\u001b[39m(\u001b[32m5\u001b[39m, \u001b[32m1\u001b[39m, \u001b[32m2\u001b[39m, \u001b[32m3\u001b[39m, \u001b[32m4\u001b[39m)"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "val student = Map(\n",
+    "  \"name\" -> \"Alice\",\n",
+    "  \"age\" -> 20,\n",
+    "  \"major\" -> \"Computer Science\"\n",
+    ")\n",
+    "\n",
+    "println(s\"Student info: $student\")\n",
+    "println(s\"Name: ${student(\"name\")}\")\n",
+    "\n",
+    "val updatedStudent = student + (\"age\" -> 21)\n",
+    "println(s\"Updated age: ${updatedStudent(\"age\")}\")\n",
+    "\n",
+    "val uniqueNumbers = Set(1, 2, 3, 2, 4, 3, 5)\n",
+    "println(s\"Unique numbers: $uniqueNumbers\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example9-title",
+   "metadata": {},
+   "source": [
+    "## Пример 9: Option и обработка отсутствующих значений"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "example9",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Found: Alice\n",
+      "Not found\n",
+      "Name 1: Alice\n",
+      "Name 2: Unknown\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "defined \u001b[32mfunction\u001b[39m \u001b[36mfindName\u001b[39m\n",
+       "\u001b[36mname1\u001b[39m: \u001b[32mOption\u001b[39m[\u001b[32mString\u001b[39m] = \u001b[33mSome\u001b[39m(value = \u001b[32m\"Alice\"\u001b[39m)\n",
+       "\u001b[36mname2\u001b[39m: \u001b[32mOption\u001b[39m[\u001b[32mString\u001b[39m] = \u001b[32mNone\u001b[39m"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "def findName(id: Int): Option[String] = {\n",
+    "  val names = Map(1 -> \"Alice\", 2 -> \"Bob\", 3 -> \"Charlie\")\n",
+    "  names.get(id)\n",
+    "}\n",
+    "\n",
+    "val name1 = findName(1)\n",
+    "val name2 = findName(99)\n",
+    "\n",
+    "name1 match {\n",
+    "  case Some(n) => println(s\"Found: $n\")\n",
+    "  case None => println(\"Not found\")\n",
+    "}\n",
+    "\n",
+    "name2 match {\n",
+    "  case Some(n) => println(s\"Found: $n\")\n",
+    "  case None => println(\"Not found\")\n",
+    "}\n",
+    "\n",
+    "// Использование getOrElse\n",
+    "println(s\"Name 1: ${name1.getOrElse(\"Unknown\")}\")\n",
+    "println(s\"Name 2: ${name2.getOrElse(\"Unknown\")}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example10-title",
+   "metadata": {},
+   "source": [
+    "## Пример 10: Try и обработка ошибок"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "example10",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Result: 5.0\n",
+      "Error: Division by zero\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[32mimport \u001b[39m\u001b[36mscala.util.{Try, Success, Failure}\u001b[39m\n",
+       "defined \u001b[32mfunction\u001b[39m \u001b[36mdivide\u001b[39m\n",
+       "\u001b[36mresult1\u001b[39m: \u001b[32mTry\u001b[39m[\u001b[32mDouble\u001b[39m] = \u001b[33mSuccess\u001b[39m(value = \u001b[32m5.0\u001b[39m)\n",
+       "\u001b[36mresult2\u001b[39m: \u001b[32mTry\u001b[39m[\u001b[32mDouble\u001b[39m] = \u001b[33mFailure\u001b[39m(\n",
+       "  exception = java.lang.ArithmeticException: Division by zero\n",
+       ")"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import scala.util.{Try, Success, Failure}\n",
+    "\n",
+    "def divide(a: Int, b: Int): Try[Double] = {\n",
+    "  if (b == 0) Failure(new ArithmeticException(\"Division by zero\"))\n",
+    "  else Success(a.toDouble / b)\n",
+    "}\n",
+    "\n",
+    "val result1 = divide(10, 2)\n",
+    "val result2 = divide(10, 0)\n",
+    "\n",
+    "result1 match {\n",
+    "  case Success(value) => println(s\"Result: $value\")\n",
+    "  case Failure(e) => println(s\"Error: ${e.getMessage}\")\n",
+    "}\n",
+    "\n",
+    "result2 match {\n",
+    "  case Success(value) => println(s\"Result: $value\")\n",
+    "  case Failure(e) => println(s\"Error: ${e.getMessage}\")\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example11-title",
+   "metadata": {},
+   "source": [
+    "## Пример 11: Итераторы и for comprehensions"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "example11",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Squares: List(1, 4, 9, 16, 25, 36, 49, 64, 81, 100)\n",
+      "Even numbers: List(2, 4, 6, 8, 10)\n",
+      "Pairs: List((1,1), (1,2), (1,3), (2,1), (2,2), (2,3), (3,1), (3,2), (3,3))\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[36mnumbers\u001b[39m: \u001b[32mRange\u001b[39m.\u001b[32mInclusive\u001b[39m = \u001b[33mRange\u001b[39m(\u001b[32m1\u001b[39m, \u001b[32m2\u001b[39m, \u001b[32m3\u001b[39m, \u001b[32m4\u001b[39m, \u001b[32m5\u001b[39m, \u001b[32m6\u001b[39m, \u001b[32m7\u001b[39m, \u001b[32m8\u001b[39m, \u001b[32m9\u001b[39m, \u001b[32m10\u001b[39m)\n",
+       "\u001b[36msquares\u001b[39m: \u001b[32mIndexedSeq\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mVector\u001b[39m(\u001b[32m1\u001b[39m, \u001b[32m4\u001b[39m, \u001b[32m9\u001b[39m, \u001b[32m16\u001b[39m, \u001b[32m25\u001b[39m, \u001b[32m36\u001b[39m, \u001b[32m49\u001b[39m, \u001b[32m64\u001b[39m, \u001b[32m81\u001b[39m, \u001b[32m100\u001b[39m)\n",
+       "\u001b[36mevens\u001b[39m: \u001b[32mIndexedSeq\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mVector\u001b[39m(\u001b[32m2\u001b[39m, \u001b[32m4\u001b[39m, \u001b[32m6\u001b[39m, \u001b[32m8\u001b[39m, \u001b[32m10\u001b[39m)\n",
+       "\u001b[36mpairs\u001b[39m: \u001b[32mIndexedSeq\u001b[39m[(\u001b[32mInt\u001b[39m, \u001b[32mInt\u001b[39m)] = \u001b[33mVector\u001b[39m(\n",
+       "  (\u001b[32m1\u001b[39m, \u001b[32m1\u001b[39m),\n",
+       "  (\u001b[32m1\u001b[39m, \u001b[32m2\u001b[39m),\n",
+       "  (\u001b[32m1\u001b[39m, \u001b[32m3\u001b[39m),\n",
+       "  (\u001b[32m2\u001b[39m, \u001b[32m1\u001b[39m),\n",
+       "  (\u001b[32m2\u001b[39m, \u001b[32m2\u001b[39m),\n",
+       "  (\u001b[32m2\u001b[39m, \u001b[32m3\u001b[39m),\n",
+       "  (\u001b[32m3\u001b[39m, \u001b[32m1\u001b[39m),\n",
+       "  (\u001b[32m3\u001b[39m, \u001b[32m2\u001b[39m),\n",
+       "  (\u001b[32m3\u001b[39m, \u001b[32m3\u001b[39m)\n",
+       ")"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "val numbers = 1 to 10\n",
+    "\n",
+    "// For comprehension\n",
+    "val squares = for (n <- numbers) yield n * n\n",
+    "println(s\"Squares: ${squares.toList}\")\n",
+    "\n",
+    "// С условием\n",
+    "val evens = for (n <- numbers if n % 2 == 0) yield n\n",
+    "println(s\"Even numbers: ${evens.toList}\")\n",
+    "\n",
+    "// Вложенные циклы\n",
+    "val pairs = for {\n",
+    "  i <- 1 to 3\n",
+    "  j <- 1 to 3\n",
+    "} yield (i, j)\n",
+    "println(s\"Pairs: ${pairs.toList}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example12-title",
+   "metadata": {},
+   "source": [
+    "## Пример 12: Higher-order функции"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "example12",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Doubled: List(2, 4, 6, 8, 10)\n",
+      "Evens: List(2, 4)\n",
+      "Sum: 15\n",
+      "Product: 120\n",
+      "Flattened: List(1, 2, 3, 4, 5)\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[36mnumbers\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mList\u001b[39m(\u001b[32m1\u001b[39m, \u001b[32m2\u001b[39m, \u001b[32m3\u001b[39m, \u001b[32m4\u001b[39m, \u001b[32m5\u001b[39m)\n",
+       "\u001b[36mdoubled\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mList\u001b[39m(\u001b[32m2\u001b[39m, \u001b[32m4\u001b[39m, \u001b[32m6\u001b[39m, \u001b[32m8\u001b[39m, \u001b[32m10\u001b[39m)\n",
+       "\u001b[36mevens\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mList\u001b[39m(\u001b[32m2\u001b[39m, \u001b[32m4\u001b[39m)\n",
+       "\u001b[36msum\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m15\u001b[39m\n",
+       "\u001b[36mproduct\u001b[39m: \u001b[32mInt\u001b[39m = \u001b[32m120\u001b[39m\n",
+       "\u001b[36mnested\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mList\u001b[39m[\u001b[32mInt\u001b[39m]] = \u001b[33mList\u001b[39m(\u001b[33mList\u001b[39m(\u001b[32m1\u001b[39m, \u001b[32m2\u001b[39m), \u001b[33mList\u001b[39m(\u001b[32m3\u001b[39m, \u001b[32m4\u001b[39m), \u001b[33mList\u001b[39m(\u001b[32m5\u001b[39m))\n",
+       "\u001b[36mflattened\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mInt\u001b[39m] = \u001b[33mList\u001b[39m(\u001b[32m1\u001b[39m, \u001b[32m2\u001b[39m, \u001b[32m3\u001b[39m, \u001b[32m4\u001b[39m, \u001b[32m5\u001b[39m)"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "val numbers = List(1, 2, 3, 4, 5)\n",
+    "\n",
+    "// map\n",
+    "val doubled = numbers.map(_ * 2)\n",
+    "println(s\"Doubled: $doubled\")\n",
+    "\n",
+    "// filter\n",
+    "val evens = numbers.filter(_ % 2 == 0)\n",
+    "println(s\"Evens: $evens\")\n",
+    "\n",
+    "// reduce\n",
+    "val sum = numbers.reduce(_ + _)\n",
+    "println(s\"Sum: $sum\")\n",
+    "\n",
+    "// fold\n",
+    "val product = numbers.fold(1)(_ * _)\n",
+    "println(s\"Product: $product\")\n",
+    "\n",
+    "// flatMap\n",
+    "val nested = List(List(1, 2), List(3, 4), List(5))\n",
+    "val flattened = nested.flatMap(identity)\n",
+    "println(s\"Flattened: $flattened\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example13-title",
+   "metadata": {},
+   "source": [
+    "## Пример 13: Работа с датами и временем"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "example13",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Current date and time: 2025-11-23T12:57:38.343659051\n",
+      "Date in 7 days: 2025-11-30T12:57:38.343659051\n",
+      "Today: 2025-11-23\n",
+      "Year: 2025\n",
+      "Month: 11\n",
+      "Day: 23\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[32mimport \u001b[39m\u001b[36mjava.time.{LocalDateTime, LocalDate, Duration}\u001b[39m\n",
+       "\u001b[36mnow\u001b[39m: \u001b[32mLocalDateTime\u001b[39m = 2025-11-23T12:57:38.343659051\n",
+       "\u001b[36mfutureDate\u001b[39m: \u001b[32mLocalDateTime\u001b[39m = 2025-11-30T12:57:38.343659051\n",
+       "\u001b[36mtoday\u001b[39m: \u001b[32mLocalDate\u001b[39m = 2025-11-23"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import java.time.{LocalDateTime, LocalDate, Duration}\n",
+    "\n",
+    "val now = LocalDateTime.now()\n",
+    "println(s\"Current date and time: $now\")\n",
+    "\n",
+    "val futureDate = now.plusDays(7)\n",
+    "println(s\"Date in 7 days: $futureDate\")\n",
+    "\n",
+    "val today = LocalDate.now()\n",
+    "println(s\"Today: $today\")\n",
+    "println(s\"Year: ${today.getYear}\")\n",
+    "println(s\"Month: ${today.getMonthValue}\")\n",
+    "println(s\"Day: ${today.getDayOfMonth}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example14-title",
+   "metadata": {},
+   "source": [
+    "## Пример 14: Ввод данных (альтернативный метод)\n",
+    "\n",
+    "**Примечание:** Интерактивный ввод через `Input.request()` не работает из-за проблемы с отображением кнопки подтверждения в JupyterLab. Используйте переменные или параметры функций вместо этого."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "example14",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello, Admin!\n",
+      "Hello, Scala User!\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "\u001b[36mname\u001b[39m: \u001b[32mString\u001b[39m = \u001b[32m\"Admin\"\u001b[39m\n",
+       "defined \u001b[32mfunction\u001b[39m \u001b[36mgreet\u001b[39m"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "// Альтернативный метод: использование переменной\n",
+    "val name = \"Admin\"  // Измените это значение на нужное\n",
+    "println(s\"Hello, $name!\")\n",
+    "\n",
+    "// Или через функцию с параметром\n",
+    "def greet(name: String): Unit = {\n",
+    "  println(s\"Hello, $name!\")\n",
+    "}\n",
+    "\n",
+    "greet(\"Scala User\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example15-title",
+   "metadata": {},
+   "source": [
+    "## Пример 15: Trait и полиморфизм"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "example15",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Circle: area = 78.53981633974483, perimeter = 31.41592653589793\n",
+      "Rectangle: area = 24.0, perimeter = 20.0\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "defined \u001b[32mtrait\u001b[39m \u001b[36mShape\u001b[39m\n",
+       "defined \u001b[32mclass\u001b[39m \u001b[36mCircle\u001b[39m\n",
+       "defined \u001b[32mclass\u001b[39m \u001b[36mRectangle\u001b[39m\n",
+       "\u001b[36mcircle\u001b[39m: \u001b[32mCircle\u001b[39m = \u001b[33mCircle\u001b[39m(radius = \u001b[32m5.0\u001b[39m)\n",
+       "\u001b[36mrectangle\u001b[39m: \u001b[32mRectangle\u001b[39m = \u001b[33mRectangle\u001b[39m(width = \u001b[32m4.0\u001b[39m, height = \u001b[32m6.0\u001b[39m)\n",
+       "\u001b[36mshapes\u001b[39m: \u001b[32mList\u001b[39m[\u001b[32mProduct\u001b[39m with \u001b[32mShape\u001b[39m with \u001b[32mSerializable\u001b[39m] = \u001b[33mList\u001b[39m(\n",
+       "  \u001b[33mCircle\u001b[39m(radius = \u001b[32m5.0\u001b[39m),\n",
+       "  \u001b[33mRectangle\u001b[39m(width = \u001b[32m4.0\u001b[39m, height = \u001b[32m6.0\u001b[39m)\n",
+       ")"
+      ]
+     },
+     "execution_count": 14,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "trait Shape {\n",
+    "  def area(): Double\n",
+    "  def perimeter(): Double\n",
+    "}\n",
+    "\n",
+    "case class Circle(radius: Double) extends Shape {\n",
+    "  def area(): Double = math.Pi * radius * radius\n",
+    "  def perimeter(): Double = 2 * math.Pi * radius\n",
+    "}\n",
+    "\n",
+    "case class Rectangle(width: Double, height: Double) extends Shape {\n",
+    "  def area(): Double = width * height\n",
+    "  def perimeter(): Double = 2 * (width + height)\n",
+    "}\n",
+    "\n",
+    "val circle = Circle(5.0)\n",
+    "val rectangle = Rectangle(4.0, 6.0)\n",
+    "\n",
+    "val shapes = List(circle, rectangle)\n",
+    "shapes.foreach { shape =>\n",
+    "  println(s\"${shape.getClass.getSimpleName}: area = ${shape.area()}, perimeter = ${shape.perimeter()}\")\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "725d088a-b60d-4ea8-a4cc-d033ab6fb788",
+   "metadata": {},
+   "source": [
+    "ps. К сожалению в этом ядре не работает интерактивный ввод. данные нужно либо хардкодить в ячейках либо читать из файла"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f5dedd06-5ea6-4a06-a1ce-a0502d409f39",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Scala (Almond)",
+   "language": "scala",
+   "name": "scala-almond"
+  },
+  "language_info": {
+   "codemirror_mode": "text/x-scala",
+   "file_extension": ".sc",
+   "mimetype": "text/x-scala",
+   "name": "scala",
+   "nbconvert_exporter": "script",
+   "version": "2.13.17"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

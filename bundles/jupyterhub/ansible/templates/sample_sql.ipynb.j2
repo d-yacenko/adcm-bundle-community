@@ -1,0 +1,232 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "01fde6e3-e1cd-4e40-8ac5-7d37f527c4f6",
+   "metadata": {
+    "editable": true,
+    "slideshow": {
+     "slide_type": ""
+    },
+    "tags": []
+   },
+   "source": [
+    "# Примеры кода на SQL"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b0242a33-a0d4-417b-a17e-59daab8da1c3",
+   "metadata": {},
+   "source": [
+    "## Подключение к БД \n",
+    "в синтаксисе: \n",
+    "```! <SqlAlchemy link to DB>```"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "d787183e-7262-4436-94f4-e5991bb90811",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "! postgresql+psycopg2://postgres@10.129.0.174:5432/postgres;"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "49916ee3-fe08-4856-ac31-aaa52c4d79a1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Selected 1 rows:\n",
+      "+------------------+\n",
+      "| current_database |\n",
+      "+------------------+\n",
+      "| postgres         |\n",
+      "+------------------+\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "SELECT current_database();"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "85d7ef69-bbf6-4a3b-9e9d-4adbe25eb6f7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Selected 40 rows:\n",
+      "+----------------------------------+\n",
+      "| table_name                       |\n",
+      "+----------------------------------+\n",
+      "| fact_ad_spend                    |\n",
+      "| fact_ad_spend_items              |\n",
+      "| fact_billing_payments            |\n",
+      "| fact_billing_payments_items      |\n",
+      "| fact_churn_analysis              |\n",
+      "| fact_churn_analysis_items        |\n",
+      "| fact_finance_invoices            |\n",
+      "| fact_finance_invoices_items      |\n",
+      "| fact_hr_training                 |\n",
+      "| fact_hr_training_items           |\n",
+      "| fact_inventory_movements         |\n",
+      "| fact_inventory_movements_items   |\n",
+      "| fact_lead_generation             |\n",
+      "| fact_lead_generation_items       |\n",
+      "| fact_logistics_shipments         |\n",
+      "| fact_logistics_shipments_items   |\n",
+      "| fact_manufacturing_output        |\n",
+      "| fact_manufacturing_output_items  |\n",
+      "| fact_marketing_campaigns         |\n",
+      "| fact_marketing_campaigns_items   |\n",
+      "| fact_orders                      |\n",
+      "| fact_orders_items                |\n",
+      "| fact_procurement_purchases       |\n",
+      "| fact_procurement_purchases_items |\n",
+      "| fact_renewals                    |\n",
+      "| fact_renewals_items              |\n",
+      "| fact_returns                     |\n",
+      "| fact_returns_items               |\n",
+      "| fact_sales_b2b                   |\n",
+      "| fact_sales_b2b_items             |\n",
+      "| fact_sales_online                |\n",
+      "| fact_sales_online_items          |\n",
+      "| fact_sales_retail                |\n",
+      "| fact_sales_retail_items          |\n",
+      "| fact_subscriptions_new           |\n",
+      "| fact_subscriptions_new_items     |\n",
+      "| fact_support_tickets             |\n",
+      "| fact_support_tickets_items       |\n",
+      "| fact_website_traffic             |\n",
+      "| fact_website_traffic_items       |\n",
+      "+----------------------------------+\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "SELECT table_name\n",
+    "FROM information_schema.tables\n",
+    "WHERE table_schema = 'public'\n",
+    "  AND table_type = 'BASE TABLE'\n",
+    "ORDER BY table_name;"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "032d7a01-2798-49db-b7f7-5a378ad09ccf",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Selected 3 rows:\n",
+      "+------------+----------+------------+------------+------------+--------+--------+\n",
+      "| date       | order_id | dimension1 | dimension2 | dimension3 | fact   | plan   |\n",
+      "+------------+----------+------------+------------+------------+--------+--------+\n",
+      "| 2025-04-04 | 1400001  | EMEA       | Social     | Partners   | 340.14 | 353.65 |\n",
+      "| 2025-06-18 | 1400002  | LATAM      | Video      | Wholesale  | 737.51 | 805.89 |\n",
+      "| 2025-05-30 | 1400003  | EMEA       | Video      | Online     | 372.81 | 347.96 |\n",
+      "+------------+----------+------------+------------+------------+--------+--------+\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "select * from fact_ad_spend limit 3;"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "f84f2f43-6748-4632-a607-ec1ca72e3a8b",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Selected 3 rows:\n",
+      "+---------+----------+------------+----------+------------+--------+\n",
+      "| line_id | order_id | product    | quantity | unit_price | amount |\n",
+      "+---------+----------+------------+----------+------------+--------+\n",
+      "| 1       | 1400001  | TikTok Ads | 2        | 22.98      | 45.97  |\n",
+      "| 2       | 1400001  | Google Ads | 6        | 45.90      | 275.37 |\n",
+      "| 3       | 1400001  | TikTok Ads | 1        | 18.80      | 18.80  |\n",
+      "+---------+----------+------------+----------+------------+--------+\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "select * from fact_ad_spend_items limit 3;"
+   ]
+  },
+  {
+   "attachments": {
+    "91f917a0-5477-4fd6-8f28-e498c913086e.png": {
+     "image/png": "iVBORw0KGgoAAAANSUhEUgAAAMgAAACRCAMAAACxBweTAAAA1VBMVEX///+DuFYTEhL7+/uJwVoPDA0DAgIcGxsWFRUPDw8HBgb39/cfHh4tKysYGBgTDxDz8/M0MzPm5uYnJSXs7OyZmJljYmPMy8u1tbWNjI3R0dFEQkPg4OBfXV6op6g9PT1XVVWCgIG8vLxOTk50cXKdnZ1sa2tslExwm07Pz8+6ubpEXDN5qFOFhIUwLi5RT1AcJRdkikiAs1fx9e5aekEwPyZMaDgYHhY2SCkjLhs9US9VWVOLkoW0u67K0sTS2sy8xLXh59xpbmZ9g3lQU02Fi3+gqZmcOiCFAAAMYElEQVR4nO1cZ3fayhYdaxh1sHrvEiS2A07iJE6/N7nl//+kNyOJYkBCwPH1+8BeKws5ks5oz2nTEbrgggsuuOCCl4ExR0jJ3fo6oT/FXGGXWo4RnucVhYJcv6r8YPWKRe8hhJN0ofvsYZxbCNnT+l5g/+cMWrgyRhYhGrsOfYRyPmeXkawgTc49z0swutc9r/3/+h5PP19JzcJwxyrloPARQgu+YPcS82Vo0CrkKBFVj9l1Rqtzrl/Tz0LGNSVCrOaZjBJEhWy0r0T0Hor1Wi1pSImwN8JUZdrx0hfgUKMhUhBWn4xInucmXhJpP70mgq/d9hVGJOIbU2O/NRHdC2foxYlcKzanNESquULsfRqJ5Pavmsh0gutrPLEbIuObmtsLEyEKFqpWIxXyqBHVRCYO1Q/9v7jSLFefLl9hRGZh+8d93BIpkENV+dJENOTS+myJoDBsiIh5kiS3CM2EhSmvfL0mch+3f8TZiohG/P8DIiheIKclEvGu9cS0coQLsnSRmki+jE6mvyKCPF4rXp6IRpKqJYJ801W3nX1lTDWRovUYSy7WRFDoeOFuEf8NVkSQJ4TTlggeZ+Od8EuU9pWC0GQpNqaWU6dfEzGuqaW9EIJrSkRu8iGhRKqq/l8iMCKuoij0VkazP7JY2qMckVYnnYK3KR2bpwanEHrHrPOhTe5fjIhKP02siRhi0mqE/jDTMhlEF8VMIyitWx/hmOj10645SYUFyyaKwPJITQSn2QtwaIDbf8ufjWtc4+ltK1omeGwsLzdErH4vuOCCCy644IILLrjgggs6gC3DvfWSZJokiVdElna+SMWKnohUDr9yFrBV+JkpStJEHesphW4KnMSpaeVFJ5aNjSIvqUhuoi7SDZFlfhs9U0fL8GKVTPQqCSINr8rAihV4fqlKYuofXbKR3AtkklKRhrISibFiBN48VIlYTsHJRHOTqI7XKRdbbj4mE8cdrBgc5VTk7NboFllUJhFmLhwXa2oSfUB9W969JM6iQSJ9legD6ttKSjLJB4k8iCAmqm8cfq6G5qXy2Dv0fW4pm7Z14KGVyESX9eJstbi6XB6nXKOSJnZPJMPeQs6C7vt7EM2IkJxFhdKYDVXGGpo94aZd5RYmqU4Q6XOT06lEoewcXyaDMhUFb6/IVK6G2tSWSFtSi9PezOXwdC9T5nK687ZW8dlpNdO8LZcnvO0Kk9MqYAmjlP2nxnDLqW7Hw8NA9Tk9/NQT4Iqvzm4neNJ4owYVh5+fHXsSkh5lmREbfz4fVikny+tAUI8LVR0iU3KEoXhyBtASZLD5WaOFhHeAWoL+etb+8KM+TJmITQalWm2pyeFnB6Ig5aA6wbF8npc/hTUWLFwSCLNawlDNAY6CSw6mabOE4qi6fnrQ3QdNFw8yUVLhtITVDUPm9ybHM4Az6UBtY10FcvMVHvSPd2fmjz2IpV4l41KA5/Hl/ehO+AksFsW91hVz0Hb1kFEeV6Ov5i9gwTjssR1fhvVzit+Pb0ZXV6Orj/oDsGTFDLsaCrc8ZNyt8V16RXlQJu/ffoPufltStf+GIcPlwRY/uQ81D8rkNfcdWnqwP8vicQld0oN51/KgTN5J4A5v73WFioMOWOgbc/QVk69jaDdB5WLXXgMePNb/IK/XPJib/IYuQZN2vAGrM+hSHsxPGzwok1fwxuXJ23nRhzes32/fXz3B6Ct4DEbl1iIvS4ZuDqE/uHejLSJvHsEjl7HVVHd06BLQ3x+3eFAmH1RwleTqpr8bMmR/ocaf0usdIlfvH/+CLkeRNpNJDL+csPy8y+NZVOILa5U8g0J+7lMIUwm4lyjS2r1zeA+Jdz2kUYkJ7yXj5ZXCgYesX5PtkLUMXNwP6LKslT15Ivic3fe3+2gwJl/BW3SoXC7t1juaw6fjQf+0VyEsvYvQXSxUSE0yt0DHamp0uHqNt/DuLjaukajQktFfX7poXI3uUvDZ2lljriG4ZeFOy2K2NYG3LbaDhcbhG2jBv8Ruy6Kp5F/o8hoKAQces348vu/kcTX6DN4tQSlbgW/DZ8NqfzZsiXxYgBfoMw7l4FH6wUi7XaR2EujBM+TSTIhPnGLsgaLuT+tLJ4F3Sk2KkCHCjpRTRNybPiJXb+HmSlowbRTCUb6Ol7PdSvfXFH2+zry9N97jZcVqR1hg6CN7fPixje68xrfiDX6jAqx8c59t0tXQaoncZX2FrQTnG49Zt15v82MWI+dwI07bSP0aaVkZZJ2go0W5+W29QYuFrZ04acXra2O5Ictfj+sE4zy/nvd8op0iPe65XwPfmGyVHNaUmoiCNLwiotW0MA42q8O56yfyztxupAQb+41XNbRBhC3mWm8v3YPERObB6BuFalahKHVSatuakGThJGnKU7LsPq6LdTeJZIeIqFtE3NS8z5HhxPcuFSwEVRgbLRE7y25bMqQnKrkCEg/vIrdYDWKl3p6mibGCAj6oiZSrHWJPiPSmEZZItmeTsLugWjYiHLAdsuJ9ZOXXWk3EqRRr0eQHi/SMvEUiIocXRViN4jUr9tudktWMEbFYhyzi8LFEXu9kxGjpNWFCBbMS9CkjEjHvdJsdo7O+WBdxaMDqjpqI5mTz0G6dPbmn5aFAiOM4K3eJfDiJCJ5mjum1PkIVTYkUalVVWR1XPaGv9U+JDNUI20o4nbdE5g4jEq2dFoJIliuoSloiVc6I3KYWBSux2Bnk3SYiDfCRa9qSuaZxnGnkespCl8vKw+vNxOeaFq0qhe0xpV5nsEkPLBa1aS0jWHFgiQAlIgw4MiJd2Ghu2hXtgllC5eSC35ze4Aqx7dSu6G6mhvKgs283JjR5HqBFFfnclDm756ZOkxCrsRckESp4p7j1enQSiGg8oH+ouLSSIldRIoQjesEk4nqHauAGdZ0pm1NH8dF5BAU5DYj2PAoKZCXaNGch12U9cXee2xbyfD/P857cXqgozA4TORKzfaOlG0Q+jMF77ckYzeG3w/tf+ol8gh9pnpco2U6z58N77ONBG40OdIkom6FgAj5VFUj9zfgv4NPgSE+QNgEfnrP6BlHYMAp8n1Sknc4xfH/N7MuIozfAC8IoDImmmdkzWGxf/KWNX/DxJ485ugc/Ymq/7SNyBx+0ZqxTZRDw0ZmfUs/ow+jLP9DlIZW5B1bBneTB7BkPegO/bKBp+W8cvwKGb925nTZQwCffpk2HyZXAne/f7gGh0edv0KWhtOmuYxF+ClHosq1nmUQkbTyv4Jtbnbb1HNO6/nIMJurvfZ2CH52jpl/A1z5gddWleobZ0MX+ztXoFfcHdFnFenjFg3f37/vdffT5b+iSULhummABvD36oO5rb41ekz+hSwo2FzYm8NNvf+1Tyehr51rdk/Fk2Pk/UsmzKIR/0pb2+kaITwP1km0mo4/wHrLYarwfHpQ/Fg/j7cb86B18yPK2m7zPvlq2Xi8LnkP2rJetjpuCG4JvTxdyjO7gk3q2O7KkCOALf3+pm1lx9IqAt7I8fk+v+QZ+r8IP8mq9Nv79I/iKB4vsDbY+fFfx9zpyjT6Dr17GekdrN9wdkz0TD/rnJY9PE/CIVXXtP9IE8Bj8S21i8OgdvIMkfOeIXCSDN4P/rLfCjF5J4CMORd9mU5cHP2C7IB9Go9fwjh7078Mt+GM3jB/Ed/LuzeM3aEcPDhlPAs8k4R5n0FEkkA+OjyaAW6fbQnnwyimGOLPLw6b4WzlPZNjFbQMrO5BCwCkTmxXqyjFgSy4fqmHLFKAG/pVYrpeSRIIJNVKjlWRwQ11xgKw6UtVoWTzQ5qcb8agqSeTy/IYX9vkNi7J5gIMkcM5Xx0XAaEHOHaSPxuSJEiLz7O0dgckd3UTHU1k/Z3aRnUqzpVTsn3P2DfXdGT87RalGdsoJSA2U6d5TaaLw1KOD2OFBxDy1O+7qp5WrJELXcU6uSeYniZyK4jknUxVjedgRZhvQ7Inkd5oA9tTjz6WyfFG0z8xEVCtpcYSMYCYJfeeEUSrFQg6POMIMBw5RE4CEGs04sQoGFWz45qBvDBxpMlBk5KvkyDPXuqF5JRHj237b1tzcJKY90Go0LySTWXFIZKWS8eDT6gYWHE+IOUsCbU/lKEaRLzhJH8qigeWVIhMZ7TNEJbrNxxIXTsHnoNjJiklscpwaOn5SBBFD4CZ2xQ6+FEr/5oQQr0RTJtIMZ/aOSLW0g2c8ClSLbn0nNNUJx3ESJwqmHufejXWODWuR14qU1iKDY0X+Dw1y/1HdKRnoAAAAAElFTkSuQmCC"
+    }
+   },
+   "cell_type": "markdown",
+   "id": "56c58e5b-e39d-4e22-8478-bb9a3c312154",
+   "metadata": {},
+   "source": [
+    "## Лабораторная работа\n",
+    "В коде ниже допишите запрос с неявным соединеним мастер-детайл таблиц\n",
+    "\n",
+    "![join.png](attachment:91f917a0-5477-4fd6-8f28-e498c913086e.png)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "65dcaeb7-c4cc-4e77-b612-8d85a2776542",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "select * \n",
+    "    from fact_ad_spend ,  fact_ad_spend_items\n",
+    "    ...\n",
+    "    limit 3;"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "242ed2a0-e479-463d-a3aa-71c7fa629445",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "SQL",
+   "language": "sql",
+   "name": "sql"
+  },
+  "language_info": {
+   "file_extension": ".sql",
+   "mimetype": "application/octet-stream",
+   "name": "sql"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

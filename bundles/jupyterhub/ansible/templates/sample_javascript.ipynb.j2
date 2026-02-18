@@ -1,0 +1,433 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на JavaScript\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "vscode": {
+     "languageId": "javascript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from JavaScript!\n",
+      "Welcome to JavaScript kernel in Jupyter.\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 1,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "console.log('Hello from JavaScript!');\n",
+    "console.log('Welcome to JavaScript kernel in Jupyter.');\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "vscode": {
+     "languageId": "javascript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum: 42\n",
+      "Product: 405\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "let a = 15;\n",
+    "let b = 27;\n",
+    "let sum = a + b;\n",
+    "let product = a * b;\n",
+    "\n",
+    "console.log(`a = ${a}`);\n",
+    "console.log(`b = ${b}`);\n",
+    "console.log(`Sum: ${sum}`);\n",
+    "console.log(`Product: ${product}`);\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа с массивами\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "vscode": {
+     "languageId": "javascript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Array elements:\n",
+      "numbers[0] = 10\n",
+      "numbers[1] = 20\n",
+      "numbers[2] = 30\n",
+      "numbers[3] = 40\n",
+      "numbers[4] = 50\n",
+      "\n",
+      "Array sum: 150\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "let numbers = [10, 20, 30, 40, 50];\n",
+    "\n",
+    "console.log('Array elements:');\n",
+    "numbers.forEach((num, index) => {\n",
+    "    console.log(`numbers[${index}] = ${num}`);\n",
+    "});\n",
+    "\n",
+    "let asum = numbers.reduce((acc, num) => acc + num, 0);\n",
+    "console.log(`\\nArray sum: ${asum}`);\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Функции\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {
+    "vscode": {
+     "languageId": "javascript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of 5 is 120\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "function factorial(n) {\n",
+    "    if (n <= 1) {\n",
+    "        return 1;\n",
+    "    }\n",
+    "    return n * factorial(n - 1);\n",
+    "}\n",
+    "\n",
+    "let num = 5;\n",
+    "let result = factorial(num);\n",
+    "console.log(`Factorial of ${num} is ${result}`);\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "vscode": {
+     "languageId": "javascript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello, JavaScript!\n",
+      "Length of greeting: 18\n",
+      "Uppercase: HELLO, JAVASCRIPT!\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "let userName = 'JavaScript';\n",
+    "let greeting = `Hello, ${userName}!`;\n",
+    "\n",
+    "console.log(greeting);\n",
+    "console.log(`Length of greeting: ${greeting.length}`);\n",
+    "console.log(`Uppercase: ${greeting.toUpperCase()}`);\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Объекты и классы\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "vscode": {
+     "languageId": "javascript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Calculation history:\n",
+      "25.5 + 4.2 = 29.7\n",
+      "25.5 * 4.2 = 107.10000000000001\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "class Calculator {\n",
+    "    constructor() {\n",
+    "        this.history = [];\n",
+    "    }\n",
+    "    \n",
+    "    add(a, b) {\n",
+    "        let result = a + b;\n",
+    "        this.history.push(`${a} + ${b} = ${result}`);\n",
+    "        return result;\n",
+    "    }\n",
+    "    \n",
+    "    multiply(a, b) {\n",
+    "        let result = a * b;\n",
+    "        this.history.push(`${a} * ${b} = ${result}`);\n",
+    "        return result;\n",
+    "    }\n",
+    "    \n",
+    "    showHistory() {\n",
+    "        console.log('Calculation history:');\n",
+    "        this.history.forEach(op => console.log(op));\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "let calc = new Calculator();\n",
+    "calc.add(25.5, 4.2);\n",
+    "calc.multiply(25.5, 4.2);\n",
+    "calc.showHistory();\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Асинхронные операции (Promise)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {
+    "vscode": {
+     "languageId": "javascript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Start\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "Promise { <pending> }"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "After delay\n",
+      "Done\n"
+     ]
+    }
+   ],
+   "source": [
+    "function delay(ms) {\n",
+    "    return new Promise(resolve => setTimeout(resolve, ms));\n",
+    "}\n",
+    "\n",
+    "async function asyncExample() {\n",
+    "    console.log('Start');\n",
+    "    await delay(100);\n",
+    "    console.log('After delay');\n",
+    "    return 'Done';\n",
+    "}\n",
+    "\n",
+    "asyncExample().then(result => console.log(result));\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 8: Работа с датами\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {
+    "vscode": {
+     "languageId": "javascript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Current date: 11/21/2025\n",
+      "Current time: 10:48:14 PM\n",
+      "ISO format: 2025-11-21T19:48:14.204Z\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "let now = new Date();\n",
+    "console.log(`Current date: ${now.toLocaleDateString()}`);\n",
+    "console.log(`Current time: ${now.toLocaleTimeString()}`);\n",
+    "console.log(`ISO format: ${now.toISOString()}`);\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "JavaScript (Node.js)",
+   "language": "javascript",
+   "name": "javascript"
+  },
+  "language_info": {
+   "file_extension": ".js",
+   "mimetype": "application/javascript",
+   "name": "javascript",
+   "version": "20.19.5"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}

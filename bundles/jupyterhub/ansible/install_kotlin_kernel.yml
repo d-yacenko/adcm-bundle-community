@@ -1,0 +1,211 @@
+# ansible/install_kotlin_kernel.yml
+---
+- name: Install Kotlin (kotlin-jupyter) kernel into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      ansible.builtin.fail:
+        msg: "install_kotlin_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Derive runtime variables
+      set_fact:
+        hub_bin_dir: "{{ hub_venv_dir.rstrip('/') }}/bin"
+        hub_python: "{{ hub_venv_dir.rstrip('/') }}/bin/python3"
+        hub_kernels_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels"
+        kotlin_kernel_id: "{{ (job.config.kernel_id | default('kotlin', true) | trim) or 'kotlin' }}"
+        kotlin_kernel_display_name: "{{ (job.config.kernel_display_name | default('Kotlin', true) | trim) or 'Kotlin' }}"
+        kotlin_default_kernel_id: "kotlin"
+        kotlin_default_kernel_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels/kotlin"
+        kotlin_kernel_dest_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels/{{ (job.config.kernel_id | default('kotlin', true) | trim) or 'kotlin' }}"
+        jdk_package: "{{ (job.config.jdk_package | default('openjdk-17-jdk', true) | trim) or 'openjdk-17-jdk' }}"
+        kotlin_pip_package: "{{ (job.config.pip_package | default('kotlin-jupyter-kernel', true) | trim) or 'kotlin-jupyter-kernel' }}"
+        kotlin_cache_dir: "{{ (job.config.cache_dir | default('/opt/jupyterhub/kotlin-cache', true) | trim) or '/opt/jupyterhub/kotlin-cache' }}"
+        kotlin_libraries_dir: "{{ (job.config.libraries_dir | default('/opt/jupyterhub/kotlin-libraries', true) | trim) or '/opt/jupyterhub/kotlin-libraries' }}"
+
+    - name: Ensure hub python exists
+      ansible.builtin.stat:
+        path: "{{ hub_python }}"
+      register: hub_python_stat
+
+    - name: Fail if hub python missing
+      ansible.builtin.fail:
+        msg: "Python interpreter {{ hub_python }} not found. Ensure JupyterHub venv exists."
+      when: not hub_python_stat.stat.exists
+
+    - name: Install required apt packages
+      ansible.builtin.apt:
+        name: "{{ [jdk_package] }}"
+        state: present
+        update_cache: true
+
+    - name: Install Kotlin kernel pip package into hub venv
+      command:
+        argv:
+          - "{{ hub_python }}"
+          - "-m"
+          - "pip"
+          - "install"
+          - "--upgrade"
+          - "{{ kotlin_pip_package }}"
+
+    - name: Ensure shared Kotlin cache directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "1777"
+      loop:
+        - "{{ kotlin_cache_dir }}"
+        - "{{ kotlin_libraries_dir }}"
+
+    - name: Ship krangl library descriptor
+      copy:
+        dest: "{{ kotlin_libraries_dir }}/krangl.json"
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          {
+            "name": "krangl",
+            "description": "Tabular data manipulation for Kotlin (added by ADCM bundle).",
+            "dependencies": [
+              {
+                "groupId": "de.mpicbg.scicomp",
+                "artifactId": "krangl",
+                "version": "0.17.6"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "mavenCentral",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ]
+          }
+
+    - name: Ensure Kotlin global options declare krangl
+      copy:
+        dest: "{{ kotlin_libraries_dir }}/global.options"
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          {
+            "libraries": {
+              "krangl": {
+                "descriptorPath": "krangl.json"
+              }
+            }
+          }
+
+    - name: Ensure default Kotlin kernelspec exists
+      ansible.builtin.stat:
+        path: "{{ kotlin_default_kernel_dir }}/kernel.json"
+      register: kotlin_kernel_stat
+
+    - name: Fail if default Kotlin kernelspec missing
+      ansible.builtin.fail:
+        msg: "Kotlin kernelspec was not installed under {{ kotlin_default_kernel_dir }}"
+      when: not kotlin_kernel_stat.stat.exists
+
+    - name: Ensure destination Kotlin kernel directory exists
+      ansible.builtin.file:
+        path: "{{ kotlin_kernel_dest_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Sync Kotlin kernelspec into custom directory
+      copy:
+        src: "{{ kotlin_default_kernel_dir }}/"
+        dest: "{{ kotlin_kernel_dest_dir }}/"
+        owner: root
+        group: root
+        mode: "0755"
+        remote_src: true
+      when: kotlin_kernel_id != kotlin_default_kernel_id
+
+    - name: Render kernel.json with configured display name
+      copy:
+        dest: "{{ kotlin_kernel_dest_dir }}/kernel.json"
+        mode: "0644"
+        content: "{{ kotlin_kernel_spec | to_nice_json }}"
+      vars:
+        kotlin_kernel_spec:
+          argv:
+            - "{{ hub_python }}"
+            - "-m"
+            - "run_kotlin_kernel"
+            - "{connection_file}"
+          display_name: "{{ kotlin_kernel_display_name }}"
+          language: "kotlin"
+          interrupt_mode: "message"
+          env:
+            KOTLIN_JUPYTER_CACHE_DIR: "{{ kotlin_cache_dir }}"
+            KOTLIN_JUPYTER_LIBRARIES_DIR: "{{ kotlin_libraries_dir }}"
+
+    - name: Ensure Kotlin kernel directory is world-readable
+      ansible.builtin.file:
+        path: "{{ kotlin_kernel_dest_dir }}"
+        mode: "0755"
+        recurse: true
+
+    - name: Show resulting Kotlin kernel info
+      debug:
+        msg:
+          hub_venv_dir: "{{ hub_venv_dir }}"
+          kernel_id: "{{ kotlin_kernel_id }}"
+          kernel_display_name: "{{ kotlin_kernel_display_name }}"
+          pip_package: "{{ kotlin_pip_package }}"
+          jdk_package: "{{ jdk_package }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_kotlin.ipynb.j2
+        dest: "{{ admin_home }}/sample_kotlin.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

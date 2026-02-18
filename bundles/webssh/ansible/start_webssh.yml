@@ -1,0 +1,13 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    webssh_service: "{{ services.webssh.config.systemd_unit }}"
+  tasks:
+    - name: Start WebSSH service
+      systemd:
+        name: "{{ webssh_service }}"
+        state: started
+
+

@@ -1,0 +1,112 @@
+---
+- type: cluster
+  name: pgadmin4_cluster
+  display_name: pgAdmin 4 Cluster
+  version: "1.0.5"
+  license: EULA.txt
+  adcm_min_version: 2.6.0
+  description: "Single-host pgAdmin 4 (web mode) behind Apache on Ubuntu 22.04 (Jammy)."
+
+- type: service
+  name: pgadmin4_web
+  display_name: pgAdmin 4 (web)
+  version: "1.0.5"
+  description: "Installs pgAdmin 4 in web mode via upstream apt repo, configures Apache WSGI and exposes at /pgadmin4."
+  config:
+    - name: __main_info
+      type: text
+      default: |
+        After installation the pgAdmin 4 web interface is available at
+        http://<host>:<http_port><base_url>.
+
+        By default: http://<host>:28080/pgadmin4
+
+        ===
+        Author: D.V.Iatsenko
+        Company: Arenadata.
+      required: false
+    - name: repo_codename
+      display_name: Ubuntu codename (lsb_release -cs)
+      type: string
+      default: jammy
+    - name: base_url
+      display_name: Base URL
+      type: string
+      default: /pgadmin4
+    - name: http_port
+      display_name: HTTP port for pgAdmin (Apache VirtualHost)
+      type: integer
+      default: 28080
+    - name: apache_service
+      display_name: Apache systemd unit
+      type: string
+      default: apache2
+    - name: admin_email
+      display_name: Initial admin email (pgAdmin)
+      type: string
+      default: admin@example.com
+    - name: admin_password
+      display_name: Initial admin password (pgAdmin)
+      type: string
+      default: changeMe123!
+  components:
+    WEB:
+      display_name: Web
+      constraint: [1, +]
+  actions:
+    install:
+      display_name: Install
+      type: job
+      script_type: ansible
+      script: ansible/install.yml
+      states:
+        available: [created]
+        on_success: installed
+    configure:
+      display_name: Configure
+      type: job
+      script_type: ansible
+      script: ansible/configure.yml
+      states:
+        available: [installed]
+    start:
+      display_name: Start
+      type: job
+      script_type: ansible
+      script: ansible/start.yml
+      states:
+        available: [installed]
+    stop:
+      display_name: Stop
+      type: job
+      script_type: ansible
+      script: ansible/stop.yml
+      states:
+        available: [installed]
+    restart:
+      display_name: Restart
+      type: job
+      script_type: ansible
+      script: ansible/restart.yml
+      states:
+        available: [installed]
+    uninstall:
+      display_name: Uninstall
+      type: job
+      script_type: ansible
+      script: ansible/uninstall.yml
+      states:
+        available: [installed]
+    check:
+      display_name: Check
+      type: task
+      scripts:
+        - name: status
+          script_type: ansible
+          script: ansible/check.yml
+      states:
+        available:
+          - installed
+          - stopped
+          - failure
+        on_fail: failure

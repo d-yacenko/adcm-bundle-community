@@ -1,0 +1,328 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "9338e981-78d8-47b5-a330-d69a4f470f6c",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на Pascal"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c509ee7d-50b6-4166-a795-5fdb039a5373",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "055e5c73-d2b2-4333-b5d3-ef43516358df",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from Pascal!\n",
+      "Welcome to Pascal kernel in Jupyter.\n"
+     ]
+    }
+   ],
+   "source": [
+    "program HelloWorld;\n",
+    "begin\n",
+    "  writeln('Hello from Pascal!');\n",
+    "  writeln('Welcome to Pascal kernel in Jupyter.');\n",
+    "end."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1b717fb7-3104-4a8f-bf71-9524e13bc79e",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "3c0690a4-ae12-49fb-8141-085dd620e571",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum: 42\n",
+      "Product: 405\n"
+     ]
+    }
+   ],
+   "source": [
+    "program MathExample;\n",
+    "var\n",
+    "  a, b, sum, product: integer;\n",
+    "begin\n",
+    "  a := 15;\n",
+    "  b := 27;\n",
+    "  sum := a + b;\n",
+    "  product := a * b;\n",
+    "  \n",
+    "  writeln('a = ', a);\n",
+    "  writeln('b = ', b);\n",
+    "  writeln('Sum: ', sum);\n",
+    "  writeln('Product: ', product);\n",
+    "end."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3cb85256-4e04-400e-b8a9-9333a860c294",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа с массивами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "bcff40c1-4274-4a23-98e5-a181a27e0f0a",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Filling array with values:\n",
+      "numbers[1] = 10\n",
+      "numbers[2] = 20\n",
+      "numbers[3] = 30\n",
+      "numbers[4] = 40\n",
+      "numbers[5] = 50\n",
+      "\n",
+      "Array sum:\n",
+      "Total: 150\n"
+     ]
+    }
+   ],
+   "source": [
+    "program ArrayExample;\n",
+    "var\n",
+    "  numbers: array[1..5] of integer;\n",
+    "  i,sum: integer;\n",
+    "begin\n",
+    "  writeln('Filling array with values:');\n",
+    "  for i := 1 to 5 do\n",
+    "  begin\n",
+    "    numbers[i] := i * 10;\n",
+    "    writeln('numbers[', i, '] = ', numbers[i]);\n",
+    "  end;\n",
+    "  \n",
+    "  writeln;\n",
+    "  writeln('Array sum:');\n",
+    "  sum := 0;\n",
+    "  for i := 1 to 5 do\n",
+    "    sum := sum + numbers[i];\n",
+    "  writeln('Total: ', sum);\n",
+    "end."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a32786f2-484b-4ec4-ba62-b831be4b0dd6",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Простые функции"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "0bb28c06-b397-4f52-a337-6dab8cab5516",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of 5 is 120\n"
+     ]
+    }
+   ],
+   "source": [
+    "program FunctionExample;\n",
+    "\n",
+    "function factorial(n: integer): integer;\n",
+    "begin\n",
+    "  if n <= 1 then\n",
+    "    factorial := 1\n",
+    "  else\n",
+    "    factorial := n * factorial(n - 1);\n",
+    "end;\n",
+    "\n",
+    "var\n",
+    "  num: integer;\n",
+    "begin\n",
+    "  num := 5;\n",
+    "  writeln('Factorial of ', num, ' is ', factorial(num));\n",
+    "end."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "930e97b1-fe06-4609-a981-7af2d8eee8e8",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "dcdde64b-e6ed-4cd8-96c8-fe76fc09ffda",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello, Pascal!\n",
+      "Length of greeting: 14\n"
+     ]
+    }
+   ],
+   "source": [
+    "program StringExample;\n",
+    "var\n",
+    "  name: string;\n",
+    "  greeting: string;\n",
+    "begin\n",
+    "  name := 'Pascal';\n",
+    "  greeting := 'Hello, ' + name + '!';\n",
+    "  writeln(greeting);\n",
+    "  writeln('Length of greeting: ', length(greeting));\n",
+    "end."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5074ca75-46e6-4f21-bfea-3b5432d4ed9c",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Простой калькулятор"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "90147234-e056-4eba-81bf-15f2d86cca51",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Calculator Example:\n",
+      "x = 25.50\n",
+      "y = 4.20\n",
+      "\n",
+      "x + y = 29.70\n",
+      "x - y = 21.30\n",
+      "x * y = 107.10\n",
+      "x / y = 6.07\n"
+     ]
+    }
+   ],
+   "source": [
+    "program Calculator;\n",
+    "var\n",
+    "  x, y, result: real;\n",
+    "begin\n",
+    "  x := 25.5;\n",
+    "  y := 4.2;\n",
+    "  \n",
+    "  writeln('Calculator Example:');\n",
+    "  writeln('x = ', x:0:2);\n",
+    "  writeln('y = ', y:0:2);\n",
+    "  writeln;\n",
+    "  \n",
+    "  result := x + y;\n",
+    "  writeln('x + y = ', result:0:2);\n",
+    "  \n",
+    "  result := x - y;\n",
+    "  writeln('x - y = ', result:0:2);\n",
+    "  \n",
+    "  result := x * y;\n",
+    "  writeln('x * y = ', result:0:2);\n",
+    "  \n",
+    "  result := x / y;\n",
+    "  writeln('x / y = ', result:0:2);\n",
+    "end."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "14c11d98-37df-499e-a589-1455d405e183",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Простая игра (угадай число)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "c46ff634-febb-486d-820f-21c5878dd90e",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Guessing game:\n",
+      "Your guess: 35\n",
+      "Too low! Try a higher number.\n"
+     ]
+    }
+   ],
+   "source": [
+    "program GuessNumber;\n",
+    "var\n",
+    "  secret, guess: integer;\n",
+    "begin\n",
+    "  secret := 42;\n",
+    "  guess := 35;\n",
+    "  \n",
+    "  writeln('Guessing game:');\n",
+    "  writeln('Your guess: ', guess);\n",
+    "  \n",
+    "  if guess = secret then\n",
+    "    writeln('Congratulations! You guessed it!')\n",
+    "  else if guess < secret then\n",
+    "    writeln('Too low! Try a higher number.')\n",
+    "  else\n",
+    "    writeln('Too high! Try a lower number.');\n",
+    "end."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Pascal (Free Pascal)",
+   "language": "pascal",
+   "name": "pascal"
+  },
+  "language_info": {
+   "file_extension": ".pas",
+   "mimetype": "text/x-pascal",
+   "name": "pascal"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

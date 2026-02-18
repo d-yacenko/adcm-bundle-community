@@ -1,0 +1,14 @@
+[Unit]
+Description=ADCM Status Checker for component {{ component_id }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ checker_script_path }}
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+

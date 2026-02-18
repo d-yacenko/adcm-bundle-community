@@ -1,0 +1,42 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    apache_service: "{{ services.pgadmin4_web.config.apache_service }}"
+  tasks:
+    - name: Stop Apache (best-effort)
+      systemd:
+        name: "{{ apache_service }}"
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove pgAdmin packages
+      apt:
+        name: pgadmin4-web
+        state: absent
+        purge: yes
+
+    - name: Drop pgAdmin APT repository
+      file:
+        path: /etc/apt/sources.list.d/pgadmin4.list
+        state: absent
+
+    - name: Drop pgAdmin keyring
+      file:
+        path: /usr/share/keyrings/packages-pgadmin-org.gpg
+        state: absent
+
+    - name: apt update (clean up)
+      apt:
+        update_cache: yes
+
+    - name: Uninstall ADCM status checker
+      include_role:
+        name: status_checker
+        tasks_from: uninstall.yml
+      vars:
+        checker_type: services
+        service_name: "{{ apache_service }}"
+        component_id: "{{ services.pgadmin4_web.WEB.component_id }}"
+        host_id: "{{ adcm_hostid }}"

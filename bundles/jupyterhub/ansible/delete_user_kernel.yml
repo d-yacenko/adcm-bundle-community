@@ -1,0 +1,74 @@
+# ansible/delete_user_kernel.yml
+---
+- name: Delete user Jupyter kernel
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    # --- валидация входов ---
+    - name: Fail if username is empty
+      ansible.builtin.fail:
+        msg: "username is required"
+      when: (job.config.username | default('', true) | length) == 0
+
+    - name: Fail if kernel_name is empty
+      ansible.builtin.fail:
+        msg: "kernel_name is required"
+      when: (job.config.kernel_name | default('', true) | length) == 0
+
+    - name: Ensure user exists
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ job.config.username }}"
+        fail_key: true
+
+    # ------ compute derived vars for this block ------
+    - name: Create kernel venv and register kernel
+      vars:
+        username: "{{ job.config.username }}"
+        kernel_name: "{{ job.config.kernel_name }}"
+        venvs_root: "{{ job.config.venvs_root | default('/opt/jupyter_venvs', true) }}"
+        hub_venv_dir: >-
+          {{
+            (
+              (service is defined and service.config is defined and service.config.venv_dir is defined and service.config.venv_dir)
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+        hub_python: "{{ hub_venv_dir }}/bin/python"
+        venv_path: "{{ venvs_root }}/{{ kernel_name }}_venv"
+        pip_exec: "{{ venv_path }}/bin/pip"
+      block:
+        - name: Ensure venvs_root exists
+          ansible.builtin.file:
+            path: "{{ venvs_root }}"
+            state: directory
+            mode: "0755"
+
+        - name: Debug incoming vars
+          debug:
+            msg:
+              hub_python: "{{ hub_python | default('—', true) }}"
+              venv_path: "{{ venv_path | default('—', true) }}"
+              kernel_name: "{{ kernel_name | default('—', true) }}"
+          
+        # --- удаление kernelspec у пользователя ---
+        - name: Unregister kernel for user (ignore if absent)
+          command: "{{ venv_path }}/bin/jupyter kernelspec uninstall -y {{ kernel_name }}"
+          become_user: "{{ username }}"
+
+        # --- удаление venv ---
+        - name: Remove kernel venv directory
+          ansible.builtin.file:
+            path: "{{ venv_path }}"
+            state: absent
+

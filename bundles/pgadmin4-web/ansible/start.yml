@@ -1,0 +1,11 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    apache_service: "{{ services.pgadmin4_web.config.apache_service }}"
+  tasks:
+    - name: Start Apache
+      systemd:
+        name: "{{ apache_service }}"
+        state: started

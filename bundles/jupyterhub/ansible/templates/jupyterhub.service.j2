@@ -1,0 +1,19 @@
+# /etc/systemd/system/{{ systemd_unit }}.service
+[Unit]
+Description=JupyterHub (ADCM)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+{% if service_user|length > 0 -%}
+User={{ service_user }}
+Group={{ service_user }}
+{% endif -%}
+WorkingDirectory={{ data_dir }}
+Environment="PATH={{ venv_dir }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+ExecStart={{ venv_dir }}/bin/jupyterhub -f {{ root_dir }}/jupyterhub_config.py
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

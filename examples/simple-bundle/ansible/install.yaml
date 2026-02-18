@@ -1,0 +1,77 @@
+---
+# Ansible playbook для установки Simple Service
+# Этот playbook демонстрирует основные практики разработки для ADCM
+
+- name: Install Simple Service
+  hosts: CLUSTER
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    service_name: "simple-service"
+    config_dir: "/etc/{{ service_name }}"
+    data_dir: "/var/lib/{{ service_name }}"
+    log_dir: "/var/log/{{ service_name }}"
+    
+  tasks:
+    - name: Print cluster configuration
+      debug:
+        msg: |
+          Installing {{ service_name }} on {{ inventory_hostname }}
+          Port: {{ cluster.config.service_settings.port }}
+          Workers: {{ cluster.config.performance.worker_threads }}
+    
+    - name: Create service user
+      user:
+        name: "{{ service_name }}"
+        system: yes
+        shell: /bin/false
+        home: "{{ data_dir }}"
+        create_home: no
+      
+    - name: Create directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ service_name }}"
+        group: "{{ service_name }}"
+        mode: '0755'
+      loop:
+        - "{{ config_dir }}"
+        - "{{ data_dir }}"
+        - "{{ log_dir }}"
+    
+    - name: Install required packages
+      package:
+        name:
+          - python3
+          - python3-pip
+        state: present
+      
+    - name: Create service configuration
+      template:
+        src: templates/service.conf.j2
+        dest: "{{ config_dir }}/service.conf"
+        owner: "{{ service_name }}"
+        group: "{{ service_name }}"
+        mode: '0644'
+      
+    - name: Create systemd service file
+      template:
+        src: templates/systemd.service.j2
+        dest: "/etc/systemd/system/{{ service_name }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: reload systemd
+      
+    - name: Enable service
+      systemd:
+        name: "{{ service_name }}"
+        enabled: yes
+        daemon_reload: yes
+  
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes

@@ -1,0 +1,15 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    apache_service: "{{ services.pgadmin4_web.config.apache_service }}"
+  tasks:
+    - name: Check Apache status
+      systemd:
+        name: "{{ apache_service }}"
+        enabled: yes
+      register: svc
+    - name: Set hoststate / servicestate for ADCM
+      debug:
+        msg: "apache {{ 'running' if svc.status.ActiveState == 'active' else 'stopped' }}"

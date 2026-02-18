@@ -1,0 +1,26 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    webssh_port: "{{ services.webssh.config.port }}"
+    webssh_service: "{{ services.webssh.config.systemd_unit }}"
+  tasks:
+    - name: Update systemd unit for WebSSH with new configuration
+      template:
+        src: webssh.service.j2
+        dest: "/etc/systemd/system/{{ webssh_service }}.service"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Restart WebSSH service to apply configuration
+      systemd:
+        name: "{{ webssh_service }}"
+        state: restarted
+
+

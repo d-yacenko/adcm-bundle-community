@@ -1,0 +1,29 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Uninstall status checker
+      include_role:
+        name: status_checker
+        tasks_from: uninstall.yml
+    - name: Stop and disable service
+      systemd:
+        name: "{{ systemd_unit }}"
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: Remove systemd unit
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ systemd_unit }}.service"
+        state: absent
+
+    - name: Reload systemd
+      command: systemctl daemon-reload
+      changed_when: false
+
+    - name: Remove config file
+      ansible.builtin.file:
+        path: "{{ root_dir }}/jupyterhub_config.py"
+        state: absent

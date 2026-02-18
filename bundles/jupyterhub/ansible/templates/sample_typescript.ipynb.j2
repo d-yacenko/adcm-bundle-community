@@ -1,0 +1,553 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на TypeScript\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from TypeScript!\n",
+      "Welcome to TypeScript kernel in Jupyter.\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 1,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "console.log('Hello from TypeScript!');\n",
+    "console.log('Welcome to TypeScript kernel in Jupyter.');\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Типы и переменные\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Name: TypeScript, Type: string\n",
+      "Age: 10, Type: number\n",
+      "Is Active: true, Type: boolean\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "let uname: string = 'TypeScript';\n",
+    "let age: number = 10;\n",
+    "let isActive: boolean = true;\n",
+    "\n",
+    "console.log(`Name: ${uname}, Type: ${typeof uname}`);\n",
+    "console.log(`Age: ${age}, Type: ${typeof age}`);\n",
+    "console.log(`Is Active: ${isActive}, Type: ${typeof isActive}`);\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Массивы и типизация\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Numbers: [ 10, 20, 30, 40, 50 ]\n",
+      "Names: [ 'Alice', 'Bob', 'Charlie' ]\n",
+      "Sum of numbers: 150\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "let numbers: number[] = [10, 20, 30, 40, 50];\n",
+    "let names: Array<string> = ['Alice', 'Bob', 'Charlie'];\n",
+    "\n",
+    "console.log('Numbers:', numbers);\n",
+    "console.log('Names:', names);\n",
+    "\n",
+    "let sum: number = numbers.reduce((acc, num) => acc + num, 0);\n",
+    "console.log(`Sum of numbers: ${sum}`);\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Функции с типами\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "42\n",
+      "Hello, TypeScript!\n",
+      "Hello, TypeScript! You are 10 years old.\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "function add(a: number, b: number): number {\n",
+    "    return a + b;\n",
+    "}\n",
+    "\n",
+    "function greet(name: string, age?: number): string {\n",
+    "    if (age !== undefined) {\n",
+    "        return `Hello, ${name}! You are ${age} years old.`;\n",
+    "    }\n",
+    "    return `Hello, ${name}!`;\n",
+    "}\n",
+    "\n",
+    "console.log(add(15, 27));\n",
+    "console.log(greet('TypeScript'));\n",
+    "console.log(greet('TypeScript', 10));\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Интерфейсы\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Name: John Doe\n",
+      "Age: 30\n",
+      "Email: john@example.com\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "interface Person {\n",
+    "    name: string;\n",
+    "    age: number;\n",
+    "    email?: string;\n",
+    "}\n",
+    "\n",
+    "function displayPerson(person: Person): void {\n",
+    "    console.log(`Name: ${person.name}`);\n",
+    "    console.log(`Age: ${person.age}`);\n",
+    "    if (person.email) {\n",
+    "        console.log(`Email: ${person.email}`);\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "let user: Person = {\n",
+    "    name: 'John Doe',\n",
+    "    age: 30,\n",
+    "    email: 'john@example.com'\n",
+    "};\n",
+    "\n",
+    "displayPerson(user);\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Классы\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Calculation history:\n",
+      "25.5 + 4.2 = 29.7\n",
+      "25.5 * 4.2 = 107.10000000000001\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "class Calculator {\n",
+    "    private history: string[] = [];\n",
+    "    \n",
+    "    add(a: number, b: number): number {\n",
+    "        const result = a + b;\n",
+    "        this.history.push(`${a} + ${b} = ${result}`);\n",
+    "        return result;\n",
+    "    }\n",
+    "    \n",
+    "    multiply(a: number, b: number): number {\n",
+    "        const result = a * b;\n",
+    "        this.history.push(`${a} * ${b} = ${result}`);\n",
+    "        return result;\n",
+    "    }\n",
+    "    \n",
+    "    showHistory(): void {\n",
+    "        console.log('Calculation history:');\n",
+    "        this.history.forEach(op => console.log(op));\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "const calc = new Calculator();\n",
+    "calc.add(25.5, 4.2);\n",
+    "calc.multiply(25.5, 4.2);\n",
+    "calc.showHistory();\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Generics\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "First number: 10\n",
+      "First name: Alice\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "function getFirst<T>(items: T[]): T | undefined {\n",
+    "    return items.length > 0 ? items[0] : undefined;\n",
+    "}\n",
+    "\n",
+    "let unumbers: number[] = [10, 20, 30];\n",
+    "let unames: string[] = ['Alice', 'Bob'];\n",
+    "\n",
+    "console.log('First number:', getFirst(unumbers));\n",
+    "console.log('First name:', getFirst(unames));\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 8: Enum\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Task is active\n",
+      "Task is completed\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "enum Status {\n",
+    "    Pending = 'PENDING',\n",
+    "    Active = 'ACTIVE',\n",
+    "    Completed = 'COMPLETED'\n",
+    "}\n",
+    "\n",
+    "function getStatusMessage(status: Status): string {\n",
+    "    switch (status) {\n",
+    "        case Status.Pending:\n",
+    "            return 'Task is pending';\n",
+    "        case Status.Active:\n",
+    "            return 'Task is active';\n",
+    "        case Status.Completed:\n",
+    "            return 'Task is completed';\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "console.log(getStatusMessage(Status.Active));\n",
+    "console.log(getStatusMessage(Status.Completed));\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 9: Асинхронные операции\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "ename": "Error",
+     "evalue": "Line 2, Character 16\n    return new Promise(resolve => setTimeout(resolve, ms));\n_______________^\nTS2585: 'Promise' only refers to a type, but is being used as a value here. Do you need to change your target library? Try changing the 'lib' compiler option to es2015 or later.\n\nLine 5, Character 32\nasync function asyncExample(): Promise<string> {\n_______________________________^\nTS2705: An async function or method in ES5/ES3 requires the 'Promise' constructor.  Make sure you have a declaration for the 'Promise' constructor or include 'ES2015' in your '--lib' option.",
+     "execution_count": 9,
+     "output_type": "error",
+     "traceback": [
+      "Error: Line 2, Character 16",
+      "    return new Promise(resolve => setTimeout(resolve, ms));",
+      "_______________^",
+      "TS2585: 'Promise' only refers to a type, but is being used as a value here. Do you need to change your target library? Try changing the 'lib' compiler option to es2015 or later.",
+      "",
+      "Line 5, Character 32",
+      "async function asyncExample(): Promise<string> {",
+      "_______________________________^",
+      "TS2705: An async function or method in ES5/ES3 requires the 'Promise' constructor.  Make sure you have a declaration for the 'Promise' constructor or include 'ES2015' in your '--lib' option.",
+      "    at execTranspile (/usr/lib/node_modules/itypescript/lib/kernel.js:229:23)",
+      "    at Session.transpiler [as transpile] (/usr/lib/node_modules/itypescript/lib/kernel.js:288:35)",
+      "    at Session._runNow (/usr/lib/node_modules/itypescript/node_modules/nel/lib/nel.js:835:39)",
+      "    at Session._run (/usr/lib/node_modules/itypescript/node_modules/nel/lib/nel.js:786:14)",
+      "    at Session.execute (/usr/lib/node_modules/itypescript/node_modules/nel/lib/nel.js:929:10)",
+      "    at Kernel.execute_request (/usr/lib/node_modules/itypescript/node_modules/jp-kernel/lib/handlers_v5.js:116:18)",
+      "    at Kernel.onShellMessage (/usr/lib/node_modules/itypescript/node_modules/jp-kernel/lib/jp-kernel.js:285:41)",
+      "    at Socket.<anonymous> (/usr/lib/node_modules/itypescript/node_modules/jmp/index.js:350:17)",
+      "    at Socket.emit (node:events:524:28)",
+      "    at Socket._emitMessage (/usr/lib/node_modules/itypescript/node_modules/zeromq/lib/index.js:649:15)"
+     ]
+    }
+   ],
+   "source": [
+    "function delay(ms: number): Promise<void> {\n",
+    "    return new Promise(resolve => setTimeout(resolve, ms));\n",
+    "}\n",
+    "\n",
+    "async function asyncExample(): Promise<string> {\n",
+    "    console.log('Start');\n",
+    "    await delay(100);\n",
+    "    console.log('After delay');\n",
+    "    return 'Done';\n",
+    "}\n",
+    "\n",
+    "asyncExample().then(result => console.log(result));\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Пример 10: Union Types\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {
+    "vscode": {
+     "languageId": "typescript"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "String ID: ABC123\n",
+      "Number ID: 12345\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "undefined"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "type ID = string | number;\n",
+    "\n",
+    "function processId(id: ID): void {\n",
+    "    if (typeof id === 'string') {\n",
+    "        console.log(`String ID: ${id.toUpperCase()}`);\n",
+    "    } else {\n",
+    "        console.log(`Number ID: ${id}`);\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "processId('abc123');\n",
+    "processId(12345);\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "TypeScript (Node.js)",
+   "language": "typescript",
+   "name": "typescript"
+  },
+  "language_info": {
+   "name": ""
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}

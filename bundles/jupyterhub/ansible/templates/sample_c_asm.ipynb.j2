@@ -1,0 +1,644 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "intro",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на C"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example1-title",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие и базовые операции"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "example1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from C!\n",
+      "Welcome to C kernel in Jupyter.\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "\n",
+    "int main(void) {\n",
+    "    printf(\"Hello from C!\\n\");\n",
+    "    printf(\"Welcome to C kernel in Jupyter.\\n\");\n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example2-title",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "example2",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum: 42\n",
+      "Product: 405\n",
+      "Division: 0.5556\n",
+      "Power: 225\n",
+      "Square root of 15: 3.8730\n"
+     ]
+    }
+   ],
+   "source": [
+    "//%cflags:-lm\n",
+    "#include <stdio.h>\n",
+    "#include <math.h>\n",
+    "\n",
+    "int main(void) {\n",
+    "    int a = 15;\n",
+    "    int b = 27;\n",
+    "    int sum = a + b;\n",
+    "    int product = a * b;\n",
+    "    \n",
+    "    printf(\"a = %d\\n\", a);\n",
+    "    printf(\"b = %d\\n\", b);\n",
+    "    printf(\"Sum: %d\\n\", sum);\n",
+    "    printf(\"Product: %d\\n\", product);\n",
+    "    printf(\"Division: %.4f\\n\", (double)a / b);\n",
+    "    printf(\"Power: %.0f\\n\", pow(a, 2));\n",
+    "    printf(\"Square root of %d: %.4f\\n\", a, sqrt(a));\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example3-title",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа с массивами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "example3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Array values:\n",
+      "numbers[0] = 10\n",
+      "numbers[1] = 20\n",
+      "numbers[2] = 30\n",
+      "numbers[3] = 40\n",
+      "numbers[4] = 50\n",
+      "\n",
+      "Sum: 150\n",
+      "Max: 50\n",
+      "Min: 10\n",
+      "Average: 30.00\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "\n",
+    "int main(void) {\n",
+    "    int numbers[5];\n",
+    "    int sum = 0;\n",
+    "    int max, min;\n",
+    "    \n",
+    "    // Заполнение массива\n",
+    "    printf(\"Array values:\\n\");\n",
+    "    for (int i = 0; i < 5; i++) {\n",
+    "        numbers[i] = (i + 1) * 10;\n",
+    "        printf(\"numbers[%d] = %d\\n\", i, numbers[i]);\n",
+    "    }\n",
+    "    \n",
+    "    // Поиск суммы, максимума и минимума\n",
+    "    max = min = numbers[0];\n",
+    "    for (int i = 0; i < 5; i++) {\n",
+    "        sum += numbers[i];\n",
+    "        if (numbers[i] > max) max = numbers[i];\n",
+    "        if (numbers[i] < min) min = numbers[i];\n",
+    "    }\n",
+    "    \n",
+    "    printf(\"\\nSum: %d\\n\", sum);\n",
+    "    printf(\"Max: %d\\n\", max);\n",
+    "    printf(\"Min: %d\\n\", min);\n",
+    "    printf(\"Average: %.2f\\n\", (double)sum / 5);\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example4-title",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Функции и рекурсия"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "example4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of 5 is 120\n",
+      "\n",
+      "First 10 Fibonacci numbers:\n",
+      "0 1 1 2 3 5 8 13 21 34 \n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "\n",
+    "// Функция для вычисления факториала\n",
+    "long factorial(int n) {\n",
+    "    if (n <= 1) {\n",
+    "        return 1;\n",
+    "    }\n",
+    "    return n * factorial(n - 1);\n",
+    "}\n",
+    "\n",
+    "// Функция для вычисления чисел Фибоначчи\n",
+    "int fibonacci(int n) {\n",
+    "    if (n <= 1) {\n",
+    "        return n;\n",
+    "    }\n",
+    "    return fibonacci(n - 1) + fibonacci(n - 2);\n",
+    "}\n",
+    "\n",
+    "int main(void) {\n",
+    "    int num = 5;\n",
+    "    \n",
+    "    printf(\"Factorial of %d is %ld\\n\", num, factorial(num));\n",
+    "    \n",
+    "    printf(\"\\nFirst 10 Fibonacci numbers:\\n\");\n",
+    "    for (int i = 0; i < 10; i++) {\n",
+    "        printf(\"%d \", fibonacci(i));\n",
+    "    }\n",
+    "    printf(\"\\n\");\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example5-title",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "example5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original string: C Programming\n",
+      "Length: 13\n",
+      "Greeting: Hello, C Programming!\n",
+      "Strings are equal\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "#include <string.h>\n",
+    "\n",
+    "int main(void) {\n",
+    "    char name[] = \"C Programming\";\n",
+    "    char greeting[50];\n",
+    "    \n",
+    "    printf(\"Original string: %s\\n\", name);\n",
+    "    printf(\"Length: %zu\\n\", strlen(name));\n",
+    "    \n",
+    "    // Конкатенация строк\n",
+    "    strcpy(greeting, \"Hello, \");\n",
+    "    strcat(greeting, name);\n",
+    "    strcat(greeting, \"!\");\n",
+    "    printf(\"Greeting: %s\\n\", greeting);\n",
+    "    \n",
+    "    // Сравнение строк\n",
+    "    if (strcmp(name, \"C Programming\") == 0) {\n",
+    "        printf(\"Strings are equal\\n\");\n",
+    "    }\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example6-title",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Структуры"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "example6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "Name: Alice\n",
+      "Age: 30\n",
+      "City: Moscow\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "#include <string.h>\n",
+    "\n",
+    "struct Person {\n",
+    "    char name[50];\n",
+    "    int age;\n",
+    "    char city[50];\n",
+    "};\n",
+    "\n",
+    "void print_person(struct Person p) {\n",
+    "    printf(\"Name: %s\\n\", p.name);\n",
+    "    printf(\"Age: %d\\n\", p.age);\n",
+    "    printf(\"City: %s\\n\", p.city);\n",
+    "}\n",
+    "\n",
+    "int main(void) {\n",
+    "    struct Person person;\n",
+    "    \n",
+    "    strcpy(person.name, \"Alice\");\n",
+    "    person.age = 30;\n",
+    "    strcpy(person.city, \"Moscow\");\n",
+    "    \n",
+    "    printf(\"Person information:\\n\");\n",
+    "    print_person(person);\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example7-title",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Указатели"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "example7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Before swap: x = 10, y = 20\n",
+      "Address of x: 0x7ffe263c5af0\n",
+      "Address of y: 0x7ffe263c5af4\n",
+      "After swap: x = 20, y = 10\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "\n",
+    "void swap(int *a, int *b) {\n",
+    "    int temp = *a;\n",
+    "    *a = *b;\n",
+    "    *b = temp;\n",
+    "}\n",
+    "\n",
+    "int main(void) {\n",
+    "    int x = 10;\n",
+    "    int y = 20;\n",
+    "    int *ptr_x = &x;\n",
+    "    int *ptr_y = &y;\n",
+    "    \n",
+    "    printf(\"Before swap: x = %d, y = %d\\n\", x, y);\n",
+    "    printf(\"Address of x: %p\\n\", (void*)ptr_x);\n",
+    "    printf(\"Address of y: %p\\n\", (void*)ptr_y);\n",
+    "    \n",
+    "    swap(&x, &y);\n",
+    "    \n",
+    "    printf(\"After swap: x = %d, y = %d\\n\", x, y);\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example8-title",
+   "metadata": {},
+   "source": [
+    "## Пример 8: Динамическое выделение памяти"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "example8",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Dynamic array:\n",
+      "arr[0] = 10\n",
+      "arr[1] = 20\n",
+      "arr[2] = 30\n",
+      "arr[3] = 40\n",
+      "arr[4] = 50\n",
+      "\n",
+      "After realloc:\n",
+      "arr[0] = 10\n",
+      "arr[1] = 20\n",
+      "arr[2] = 30\n",
+      "arr[3] = 40\n",
+      "arr[4] = 50\n",
+      "arr[5] = 60\n",
+      "arr[6] = 70\n",
+      "\n",
+      "Memory freed.\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "#include <stdlib.h>\n",
+    "\n",
+    "int main(void) {\n",
+    "    int n = 5;\n",
+    "    int *arr = (int*)malloc(n * sizeof(int));\n",
+    "    \n",
+    "    if (arr == NULL) {\n",
+    "        printf(\"Memory allocation failed!\\n\");\n",
+    "        return 1;\n",
+    "    }\n",
+    "    \n",
+    "    // Заполнение массива\n",
+    "    printf(\"Dynamic array:\\n\");\n",
+    "    for (int i = 0; i < n; i++) {\n",
+    "        arr[i] = (i + 1) * 10;\n",
+    "        printf(\"arr[%d] = %d\\n\", i, arr[i]);\n",
+    "    }\n",
+    "    \n",
+    "    // Изменение размера массива\n",
+    "    arr = (int*)realloc(arr, (n + 2) * sizeof(int));\n",
+    "    arr[n] = 60;\n",
+    "    arr[n + 1] = 70;\n",
+    "    \n",
+    "    printf(\"\\nAfter realloc:\\n\");\n",
+    "    for (int i = 0; i < n + 2; i++) {\n",
+    "        printf(\"arr[%d] = %d\\n\", i, arr[i]);\n",
+    "    }\n",
+    "    \n",
+    "    free(arr);\n",
+    "    printf(\"\\nMemory freed.\\n\");\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example9-title",
+   "metadata": {},
+   "source": [
+    "## Пример 9: Работа с файлами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "example9",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "File content:\n",
+      "Hello from C!\n",
+      "This is a test file.\n",
+      "File I/O example.\n",
+      "\n",
+      "File deleted.\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "#include <stdlib.h>\n",
+    "\n",
+    "int main(void) {\n",
+    "    FILE *file;\n",
+    "    char filename[] = \"/tmp/test_c_file.txt\";\n",
+    "    char buffer[100];\n",
+    "    \n",
+    "    // Запись в файл\n",
+    "    file = fopen(filename, \"w\");\n",
+    "    if (file == NULL) {\n",
+    "        printf(\"Error opening file for writing!\\n\");\n",
+    "        return 1;\n",
+    "    }\n",
+    "    \n",
+    "    fprintf(file, \"Hello from C!\\n\");\n",
+    "    fprintf(file, \"This is a test file.\\n\");\n",
+    "    fprintf(file, \"File I/O example.\\n\");\n",
+    "    fclose(file);\n",
+    "    \n",
+    "    // Чтение из файла\n",
+    "    file = fopen(filename, \"r\");\n",
+    "    if (file == NULL) {\n",
+    "        printf(\"Error opening file for reading!\\n\");\n",
+    "        return 1;\n",
+    "    }\n",
+    "    \n",
+    "    printf(\"File content:\\n\");\n",
+    "    while (fgets(buffer, sizeof(buffer), file) != NULL) {\n",
+    "        printf(\"%s\", buffer);\n",
+    "    }\n",
+    "    \n",
+    "    fclose(file);\n",
+    "    remove(filename);\n",
+    "    printf(\"\\nFile deleted.\\n\");\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example10-title",
+   "metadata": {},
+   "source": [
+    "## Пример 10: Встроенный ассемблер (Inline Assembly)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "example10",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "sysname: Linux\n",
+      "release: 5.15.0-130-generic\n",
+      "machine: x86_64\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "#include <sys/utsname.h>\n",
+    "\n",
+    "int main(void) {\n",
+    "    struct utsname uts;\n",
+    "    long rc;\n",
+    "\n",
+    "    __asm__ __volatile__ (\n",
+    "        \"movq $63, %%rax \\n\\t\"\n",
+    "        \"movq %1, %%rdi  \\n\\t\"\n",
+    "        \"syscall         \\n\\t\"\n",
+    "        \"movq %%rax, %0\"\n",
+    "        : \"=r\"(rc)\n",
+    "        : \"r\"(&uts)\n",
+    "        : \"%rax\", \"%rdi\", \"rcx\", \"r11\", \"memory\"\n",
+    "    );\n",
+    "\n",
+    "    if (rc == 0) {\n",
+    "        printf(\"sysname: %s\\nrelease: %s\\nmachine: %s\\n\",\n",
+    "               uts.sysname, uts.release, uts.machine);\n",
+    "    } else {\n",
+    "        perror(\"syscall uname\");\n",
+    "    }\n",
+    "    return rc != 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example11-title",
+   "metadata": {},
+   "source": [
+    "## Пример 11: Дополнительный пример с ассемблером - вычисление суммы"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "example11",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum (using inline assembly): 42\n",
+      "Sum (using C): 42\n"
+     ]
+    }
+   ],
+   "source": [
+    "#include <stdio.h>\n",
+    "\n",
+    "int main(void) {\n",
+    "    int a = 15;\n",
+    "    int b = 27;\n",
+    "    int result;\n",
+    "    \n",
+    "    // Вычисление суммы с помощью inline assembly\n",
+    "    __asm__ __volatile__ (\n",
+    "        \"addl %1, %0\"\n",
+    "        : \"=r\"(result)\n",
+    "        : \"r\"(a), \"0\"(b)\n",
+    "        : \"cc\"\n",
+    "    );\n",
+    "    \n",
+    "    printf(\"a = %d\\n\", a);\n",
+    "    printf(\"b = %d\\n\", b);\n",
+    "    printf(\"Sum (using inline assembly): %d\\n\", result);\n",
+    "    printf(\"Sum (using C): %d\\n\", a + b);\n",
+    "    \n",
+    "    return 0;\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "21193da6-e228-4d7b-af2d-58b60b16acef",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "C",
+   "language": "c",
+   "name": "c"
+  },
+  "language_info": {
+   "file_extension": ".c",
+   "mimetype": "text/plain",
+   "name": "c"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

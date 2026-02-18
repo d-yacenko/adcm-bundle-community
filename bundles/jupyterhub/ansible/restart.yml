@@ -1,0 +1,43 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    venv_dir: "{{ services.jupyterhub.config.venv_dir }}"
+    root_dir: "{{ services.jupyterhub.config.root_dir }}"
+    data_dir: "{{ services.jupyterhub.config.data_dir }}"
+    bind_host: "{{ services.jupyterhub.config.bind_host | default('') }}"
+    bind_port: "{{ services.jupyterhub.config.bind_port }}"
+    base_url: "{{ services.jupyterhub.config.base_url }}"
+    spawner_cmd: "{{ services.jupyterhub.config.spawner_cmd }}"
+    env_path: "{{ services.jupyterhub.config.env_path }}"
+    pam_service: "{{ services.jupyterhub.config.pam_service }}"
+    allow_all: "{{ services.jupyterhub.config.allow_all }}"
+    admin_users: "{{ services.jupyterhub.config.admin_users }}"
+    systemd_unit: "{{ services.jupyterhub.config.systemd_unit }}"
+    service_user: "{{ services.jupyterhub.config.service_user | default('root') | trim }}"
+
+  tasks:
+    - name: Restart service
+      systemd:
+        name: "{{ systemd_unit }}"
+        state: restarted
+
+    - name: Install and start ADCM status checker
+      include_role:
+        name: status_checker
+        tasks_from: install.yml 
+      vars:
+        checker_type: services
+        service_name: "{{ services.jupyterhub.config.systemd_unit }}"
+        adcm_connection_string: "{{ adcm.config.global.adcm_url }}"
+        component_id: "{{ services.jupyterhub.HUB.component_id }}"
+        host_id: "{{ adcm_hostid }}"
+        token: "{{ env.status_api_token }}"
+
+    - name: Show mapping debug
+      debug:
+        msg:
+          unit: "{{ systemd_unit }}"
+          comp_id: "{{ services.jupyterhub.HUB.component_id | default('') }}"
+    

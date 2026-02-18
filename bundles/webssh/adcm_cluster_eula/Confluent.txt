@@ -1,0 +1,5 @@
+This software is made available by Confluent, Inc., under the
+terms of the Confluent Community License Agreement, Version 1.0
+located at http://www.confluent.io/confluent-community-license. BY
+INSTALLING, DOWNLOADING, ACCESSING, USING OR DISTRIBUTING ANY OF
+THE SOFTWARE, YOU AGREE TO THE TERMS OF SUCH LICENSE AGREEMENT.

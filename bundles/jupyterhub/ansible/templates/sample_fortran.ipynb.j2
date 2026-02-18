@@ -1,0 +1,333 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "intro",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на FORTRAN"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example1-title",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "example1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " Hello from FORTRAN!\n",
+      " Welcome to FORTRAN kernel in Jupyter.\n"
+     ]
+    }
+   ],
+   "source": [
+    "program HelloWorld\n",
+    "    implicit none\n",
+    "    write(*,*) 'Hello from FORTRAN!'\n",
+    "    write(*,*) 'Welcome to FORTRAN kernel in Jupyter.'\n",
+    "end program HelloWorld"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example2-title",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "example2",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " a =           15\n",
+      " b =           27\n",
+      " Sum:           42\n",
+      " Product:          405\n"
+     ]
+    }
+   ],
+   "source": [
+    "program MathExample\n",
+    "    implicit none\n",
+    "    integer :: a, b, sum, product\n",
+    "    \n",
+    "    a = 15\n",
+    "    b = 27\n",
+    "    sum = a + b\n",
+    "    product = a * b\n",
+    "    \n",
+    "    write(*,*) 'a = ', a\n",
+    "    write(*,*) 'b = ', b\n",
+    "    write(*,*) 'Sum: ', sum\n",
+    "    write(*,*) 'Product: ', product\n",
+    "end program MathExample"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example3-title",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа с массивами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "example3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " Filling array with values:\n",
+      " numbers(           1 ) =           10\n",
+      " numbers(           2 ) =           20\n",
+      " numbers(           3 ) =           30\n",
+      " numbers(           4 ) =           40\n",
+      " numbers(           5 ) =           50\n",
+      "\n",
+      " Array sum:\n",
+      " Total:          150\n"
+     ]
+    }
+   ],
+   "source": [
+    "program ArrayExample\n",
+    "    implicit none\n",
+    "    integer :: i, sum\n",
+    "    integer, dimension(5) :: numbers\n",
+    "    \n",
+    "    write(*,*) 'Filling array with values:'\n",
+    "    do i = 1, 5\n",
+    "        numbers(i) = i * 10\n",
+    "        write(*,*) 'numbers(', i, ') = ', numbers(i)\n",
+    "    end do\n",
+    "    \n",
+    "    write(*,*)\n",
+    "    write(*,*) 'Array sum:'\n",
+    "    sum = 0\n",
+    "    do i = 1, 5\n",
+    "        sum = sum + numbers(i)\n",
+    "    end do\n",
+    "    write(*,*) 'Total: ', sum\n",
+    "end program ArrayExample"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example4-title",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Простые функции (рекурсия)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "example4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " Factorial of            5  is          120\n"
+     ]
+    }
+   ],
+   "source": [
+    "program FunctionExample\n",
+    "    implicit none\n",
+    "    integer :: num, result\n",
+    "    \n",
+    "    num = 5\n",
+    "    result = factorial(num)\n",
+    "    write(*,*) 'Factorial of ', num, ' is ', result\n",
+    "    \n",
+    "contains\n",
+    "    recursive function factorial(n) result(fact)\n",
+    "        integer, intent(in) :: n\n",
+    "        integer :: fact\n",
+    "        \n",
+    "        if (n <= 1) then\n",
+    "            fact = 1\n",
+    "        else\n",
+    "            fact = n * factorial(n - 1)\n",
+    "        end if\n",
+    "    end function factorial\n",
+    "end program FunctionExample"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example5-title",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "example5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " Hello, FORTRAN!                                   \n",
+      " Length of greeting:           15\n"
+     ]
+    }
+   ],
+   "source": [
+    "program StringExample\n",
+    "    implicit none\n",
+    "    character(len=20) :: name\n",
+    "    character(len=50) :: greeting\n",
+    "    \n",
+    "    name = 'FORTRAN'\n",
+    "    greeting = 'Hello, ' // trim(name) // '!'\n",
+    "    write(*,*) greeting\n",
+    "    write(*,*) 'Length of greeting: ', len_trim(greeting)\n",
+    "end program StringExample"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example6-title",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Простой калькулятор (вещественные числа)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "example6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " Calculator Example:\n",
+      "x =  25.50\n",
+      "y =   4.20\n",
+      "\n",
+      "x + y =    29.70\n",
+      "x - y =    21.30\n",
+      "x * y =   107.10\n",
+      "x / y =     6.07\n"
+     ]
+    }
+   ],
+   "source": [
+    "program Calculator\n",
+    "    implicit none\n",
+    "    real :: x, y, result\n",
+    "    \n",
+    "    x = 25.5\n",
+    "    y = 4.2\n",
+    "    \n",
+    "    write(*,*) 'Calculator Example:'\n",
+    "    write(*,'(A,F6.2)') 'x = ', x\n",
+    "    write(*,'(A,F6.2)') 'y = ', y\n",
+    "    write(*,*)\n",
+    "    \n",
+    "    result = x + y\n",
+    "    write(*,'(A,F8.2)') 'x + y = ', result\n",
+    "    \n",
+    "    result = x - y\n",
+    "    write(*,'(A,F8.2)') 'x - y = ', result\n",
+    "    \n",
+    "    result = x * y\n",
+    "    write(*,'(A,F8.2)') 'x * y = ', result\n",
+    "    \n",
+    "    result = x / y\n",
+    "    write(*,'(A,F8.2)') 'x / y = ', result\n",
+    "end program Calculator"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example7-title",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Простая игра (угадай число)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "example7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " Guessing game:\n",
+      " Your guess:           35\n",
+      " Too low! Try a higher number.\n"
+     ]
+    }
+   ],
+   "source": [
+    "program GuessNumber\n",
+    "    implicit none\n",
+    "    integer :: secret, guess\n",
+    "    \n",
+    "    secret = 42\n",
+    "    guess = 35\n",
+    "    \n",
+    "    write(*,*) 'Guessing game:'\n",
+    "    write(*,*) 'Your guess: ', guess\n",
+    "    \n",
+    "    if (guess == secret) then\n",
+    "        write(*,*) 'Congratulations! You guessed it!'\n",
+    "    else if (guess < secret) then\n",
+    "        write(*,*) 'Too low! Try a higher number.'\n",
+    "    else\n",
+    "        write(*,*) 'Too high! Try a lower number.'\n",
+    "    end if\n",
+    "end program GuessNumber"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "FORTRAN (gfortran)",
+   "language": "fortran",
+   "name": "fortran"
+  },
+  "language_info": {
+   "file_extension": ".f90",
+   "mimetype": "text/x-fortran",
+   "name": "fortran"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

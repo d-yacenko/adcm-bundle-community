@@ -1,0 +1,162 @@
+---
+- hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    repo_codename: "{{ services.pgadmin4_web.config.repo_codename }}"
+    base_url: "{{ services.pgadmin4_web.config.base_url }}"
+    apache_service: "{{ services.pgadmin4_web.config.apache_service }}"
+    admin_email: "{{ services.pgadmin4_web.config.admin_email }}"
+    admin_password: "{{ services.pgadmin4_web.config.admin_password }}"
+    http_port: "{{ services.pgadmin4_web.config.http_port }}"
+  tasks:
+    - name: Check if Apache was installed before pgAdmin
+      stat:
+        path: /usr/sbin/apache2
+      register: apache_before
+
+    - name: Wait until apt/dpkg locks are free
+      shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+              fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+              fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
+          sleep 5
+        done
+      changed_when: false
+
+    - name: Ensure prerequisites are present
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Add pgAdmin APT key (keyring dearmored)
+      shell: |
+        set -euo pipefail
+        curl -fsS https://www.pgadmin.org/static/packages_pgadmin_org.pub | gpg --dearmor -o /usr/share/keyrings/packages-pgadmin-org.gpg
+      args:
+        creates: /usr/share/keyrings/packages-pgadmin-org.gpg
+        executable: /bin/bash
+
+    - name: Add pgAdmin APT repository
+      copy:
+        dest: /etc/apt/sources.list.d/pgadmin4.list
+        content: "deb [signed-by=/usr/share/keyrings/packages-pgadmin-org.gpg] https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/{{ repo_codename }} pgadmin4 main\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: apt update
+      apt:
+        update_cache: yes
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Install pgadmin4-web
+      apt:
+        name: pgadmin4-web
+        state: present
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Run pgAdmin web setup non-interactively (email/password + auto-confirm)
+      shell: |
+        set -e
+        /usr/pgadmin4/bin/setup-web.sh --yes
+      args:
+        creates: /etc/apache2/conf-enabled/pgadmin4.conf
+        executable: /bin/bash
+      environment:
+        PGADMIN_SETUP_EMAIL: "{{ admin_email }}"
+        PGADMIN_SETUP_PASSWORD: "{{ admin_password }}"
+      no_log: true
+
+    # Конфигурация Apache портов и VirtualHost:
+    # - если Apache уже был, добавляем дополнительный Listen + наш виртуальный хост
+    # - если Apache ставится впервые, переносим его с 80 на http_port и отключаем дефолтный сайт
+
+    - name: Ensure Apache listens on pgAdmin port when Apache existed before
+      lineinfile:
+        path: /etc/apache2/ports.conf
+        line: "Listen {{ http_port }}"
+        insertafter: EOF
+        state: present
+      when: apache_before.stat.exists
+
+    - name: Replace default Listen 80 with custom port when Apache is newly installed
+      replace:
+        path: /etc/apache2/ports.conf
+        regexp: '^Listen 80$'
+        replace: "Listen {{ http_port }}"
+      when: not apache_before.stat.exists
+
+    - name: Disable default Apache site when Apache is newly installed
+      file:
+        path: /etc/apache2/sites-enabled/000-default.conf
+        state: absent
+      when: not apache_before.stat.exists
+
+    - name: Deploy pgAdmin VirtualHost for dedicated port
+      copy:
+        dest: /etc/apache2/sites-available/pgadmin4-adcm.conf
+        mode: '0644'
+        content: |
+          <VirtualHost *:{{ http_port }}>
+              ServerName {{ inventory_hostname }}
+              # Optional: ServerAdmin {{ admin_email }}
+              Include /etc/apache2/conf-available/pgadmin4.conf
+          </VirtualHost>
+
+    - name: Enable pgAdmin VirtualHost
+      file:
+        src: /etc/apache2/sites-available/pgadmin4-adcm.conf
+        dest: /etc/apache2/sites-enabled/pgadmin4-adcm.conf
+        state: link
+
+    - name: Remove global pgAdmin Apache conf symlink (use only in VirtualHost)
+      file:
+        path: /etc/apache2/conf-enabled/pgadmin4.conf
+        state: absent
+
+    - name: Adjust base URL in Apache conf if requested
+      when: base_url != '/pgadmin4'
+      block:
+        - name: Replace URL prefix in conf-available
+          replace:
+            path: /etc/apache2/conf-available/pgadmin4.conf
+            regexp: '/pgadmin4'
+            replace: '{{ base_url }}'
+            backup: yes
+        - name: Reload Apache to apply new URL
+          systemd:
+            name: "{{ apache_service }}"
+            state: reloaded
+
+    - name: Restart Apache to apply port and VirtualHost changes
+      systemd:
+        name: "{{ apache_service }}"
+        state: restarted
+
+    - name: Ensure Apache is enabled and started
+      systemd:
+        name: "{{ apache_service }}"
+        state: started
+        enabled: yes
+
+    - name: Install and start ADCM status checker
+      include_role:
+        name: status_checker
+        tasks_from: install.yml
+      vars:
+        checker_type: services
+        service_name: "{{ apache_service }}"
+        adcm_connection_string: "{{ adcm.config.global.adcm_url }}"
+        component_id: "{{ services.pgadmin4_web.WEB.component_id }}"
+        host_id: "{{ adcm_hostid }}"
+        token: "{{ env.status_api_token }}"

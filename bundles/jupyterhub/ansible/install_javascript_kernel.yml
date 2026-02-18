@@ -1,0 +1,193 @@
+# ansible/install_javascript_kernel.yml
+---
+- name: Install JavaScript (ijavascript) kernel into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      fail:
+        msg: "install_javascript_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Derive runtime variables
+      set_fact:
+        hub_python: "{{ (hub_venv_dir.rstrip('/')) ~ '/bin/python3' }}"
+        hub_kernels_dir: "{{ (hub_venv_dir.rstrip('/')) ~ '/share/jupyter/kernels' }}"
+        js_kernel_id: >-
+          {{
+            (job.config.kernel_id | default('javascript', true) | trim)
+            or 'javascript'
+          }}
+        js_kernel_display_name: >-
+          {{
+            (job.config.kernel_display_name | default('JavaScript (Node.js)', true) | trim)
+            or 'JavaScript (Node.js)'
+          }}
+        js_kernel_npm_package: >-
+          {{
+            (job.config.npm_package | default('ijavascript', true) | trim)
+            or 'ijavascript'
+          }}
+        js_kernel_install_scope: >-
+          {{
+            (job.config.install_scope | default('', true) | trim)
+            or ''
+          }}
+
+    - name: Ensure hub python exists
+      stat:
+        path: "{{ hub_python }}"
+      register: hub_python_stat
+
+    - name: Fail if hub python is missing
+      fail:
+        msg: "Python interpreter {{ hub_python }} not found. Ensure JupyterHub venv exists."
+      when: not hub_python_stat.stat.exists
+
+    - name: Check if Node.js is installed
+      command: which node
+      register: node_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if Node.js is not installed
+      fail:
+        msg: "Node.js is not installed. Please install Node.js first (it should be installed during JupyterHub installation)."
+      when: node_check.rc != 0
+
+    - name: Check if npm is installed
+      command: which npm
+      register: npm_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if npm is not installed
+      fail:
+        msg: "npm is not installed. Please install npm first (it should be installed during JupyterHub installation)."
+      when: npm_check.rc != 0
+
+    - name: Show Node.js and npm versions
+      shell: node -v && npm -v
+      register: node_npm_versions
+      changed_when: false
+
+    - name: Display Node.js and npm versions
+      debug:
+        msg: "{{ node_npm_versions.stdout_lines }}"
+
+    - name: Install ijavascript globally via npm
+      command: npm install -g "{{ js_kernel_npm_package }}"
+      args:
+        creates: "/usr/local/bin/ijsinstall"
+
+    - name: Ensure kernels directory exists
+      file:
+        path: "{{ hub_kernels_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install JavaScript kernelspec into hub venv
+      command: ijsinstall
+      environment:
+        JUPYTER_PATH: "{{ hub_kernels_dir }}"
+      register: ijsinstall_result
+      changed_when: true
+      failed_when: false
+
+    - name: Ensure JavaScript kernel directory exists
+      file:
+        path: "{{ hub_kernels_dir }}/{{ js_kernel_id }}"
+        state: directory
+        mode: "0755"
+
+    - name: Find ijavascript kernel.js path
+      command: find /usr/lib/node_modules/ijavascript -name "kernel.js" -type f
+      register: ijavascript_kernel_path
+      changed_when: false
+      failed_when: false
+
+    - name: Set default ijavascript kernel path
+      set_fact:
+        ijavascript_kernel_js: "{{ (ijavascript_kernel_path.stdout_lines | first | default('/usr/lib/node_modules/ijavascript/lib/kernel.js', true)) | trim }}"
+      when: ijavascript_kernel_path.stdout_lines | length > 0
+
+    - name: Set fallback ijavascript kernel path
+      set_fact:
+        ijavascript_kernel_js: "/usr/lib/node_modules/ijavascript/lib/kernel.js"
+      when: ijavascript_kernel_path.stdout_lines | length == 0
+
+    - name: Create kernel.json for JavaScript kernel
+      set_fact:
+        js_kernel_spec: >-
+          {
+            "argv": [
+              "node",
+              "{{ ijavascript_kernel_js }}",
+              "{connection_file}"
+            ],
+            "display_name": "{{ js_kernel_display_name }}",
+            "language": "javascript"
+          }
+
+    - name: Write kernel.json for JavaScript kernel
+      copy:
+        content: "{{ js_kernel_spec | to_nice_json }}"
+        dest: "{{ hub_kernels_dir }}/{{ js_kernel_id }}/kernel.json"
+        mode: "0644"
+
+    - name: Show kernel installation info
+      debug:
+        msg:
+          hub_python: "{{ hub_python }}"
+          hub_kernels_dir: "{{ hub_kernels_dir }}"
+          js_kernel_id: "{{ js_kernel_id }}"
+          js_kernel_display_name: "{{ js_kernel_display_name }}"
+          npm_package: "{{ js_kernel_npm_package }}"
+          ijsinstall_result: "{{ ijsinstall_result.stdout_lines | default([]) }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_javascript.ipynb.j2
+        dest: "{{ admin_home }}/sample_javascript.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

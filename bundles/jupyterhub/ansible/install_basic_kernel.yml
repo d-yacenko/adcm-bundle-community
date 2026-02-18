@@ -1,0 +1,322 @@
+# ansible/install_basic_kernel.yml
+---
+- name: Install BASIC (FreeBASIC) kernel into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      ansible.builtin.fail:
+        msg: "install_basic_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Derive runtime variables
+      set_fact:
+        hub_bin_dir: "{{ hub_venv_dir.rstrip('/') }}/bin"
+        hub_python: "{{ hub_venv_dir.rstrip('/') }}/bin/python3"
+        hub_pip: "{{ hub_venv_dir.rstrip('/') }}/bin/pip"
+        basic_kernel_id: >-
+          {{
+            (job.config.kernel_id | default('basic', true) | trim) or 'basic'
+          }}
+        basic_kernel_display_name: >-
+          {{
+            (job.config.kernel_display_name | default('BASIC (FreeBASIC)', true) | trim) or 'BASIC (FreeBASIC)'
+          }}
+        freebasic_package: >-
+          {{
+            (job.config.freebasic_package | default('freebasic', true) | trim) or 'freebasic'
+          }}
+        basic_apt_packages_raw: "{{ job.config.apt_packages | default([], true) }}"
+        basic_bin_dir: >-
+          {{
+            (job.config.basic_bin_dir | default('/opt/jupyterhub/basic', true) | trim) or '/opt/jupyterhub/basic'
+          }}
+
+    - name: Build kernel directories
+      set_fact:
+        hub_kernels_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels"
+        basic_kernel_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels/{{ basic_kernel_id }}"
+        basic_scripts_dir: "{{ basic_bin_dir.rstrip('/') }}/scripts"
+
+    - name: Normalize apt packages list
+      set_fact:
+        basic_apt_packages: >-
+          {{
+            (basic_apt_packages_raw if (basic_apt_packages_raw is iterable and (basic_apt_packages_raw | length) > 0)
+             else [])
+          }}
+
+    - name: Ensure hub python exists
+      ansible.builtin.stat:
+        path: "{{ hub_python }}"
+      register: hub_python_stat
+
+    - name: Fail if hub python missing
+      ansible.builtin.fail:
+        msg: "Python interpreter {{ hub_python }} not found. Ensure JupyterHub venv exists."
+      when: not hub_python_stat.stat.exists
+
+    - name: Check if fbc is already installed
+      command: fbc --version
+      register: fbc_check
+      changed_when: false
+      failed_when: true
+      ignore_errors: true
+
+    - name: Set fbc_installed fact
+      set_fact:
+        fbc_installed: "{{ fbc_check.rc | default(1) == 0 }}"
+
+    - name: Install required dependencies for FreeBASIC
+      ansible.builtin.apt:
+        name:
+          - libtinfo5
+          - libncurses5
+          - libncurses5-dev
+        state: present
+        update_cache: true
+
+    - name: Install additional APT packages if specified
+      ansible.builtin.apt:
+        name: "{{ basic_apt_packages }}"
+        state: present
+        update_cache: true
+      when: basic_apt_packages | length > 0
+
+    - name: Install FreeBASIC from official archive
+      block:
+        - name: Determine FreeBASIC version
+          set_fact:
+            freebasic_version: "{{ job.config.freebasic_version | default('1.09.0', true) | trim }}"
+            freebasic_arch: "x86_64"
+
+        - name: Determine FreeBASIC OS type
+          set_fact:
+            freebasic_os: >-
+              {{
+                'ubuntu-20.04' if (ansible_distribution | default('', true) | lower == 'ubuntu' and ansible_distribution_version | default('', true) | regex_search('^20'))
+                else ('ubuntu-22.04' if (ansible_distribution | default('', true) | lower == 'ubuntu' and ansible_distribution_version | default('', true) | regex_search('^22'))
+                else ('debian-11' if (ansible_distribution | default('', true) | lower == 'debian' and ansible_distribution_version | default('', true) | regex_search('^11'))
+                else 'linux-x86_64'))
+              }}
+            freebasic_os_fallback: "linux-x86_64"
+
+        - name: Build FreeBASIC archive name
+          set_fact:
+            freebasic_archive_name: >-
+              FreeBASIC-{{ freebasic_version }}-{{ freebasic_os }}-{{ freebasic_arch }}.tar.gz
+            freebasic_archive_name_fallback: >-
+              FreeBASIC-{{ freebasic_version }}-{{ freebasic_os_fallback }}.tar.gz
+
+        - name: Build FreeBASIC download URLs
+          set_fact:
+            freebasic_direct_url: >-
+              https://downloads.sourceforge.net/project/fbc/FreeBASIC-{{ freebasic_version }}/Binaries-Linux/{{ freebasic_archive_name }}
+            freebasic_direct_url_fallback: >-
+              https://downloads.sourceforge.net/project/fbc/FreeBASIC-{{ freebasic_version }}/Binaries-Linux/{{ freebasic_archive_name_fallback }}
+
+        - name: Create temporary directory for FreeBASIC installation
+          ansible.builtin.tempfile:
+            state: directory
+            suffix: freebasic
+          register: freebasic_tmpdir
+
+        - name: Try to download FreeBASIC archive (primary URL)
+          get_url:
+            url: "{{ freebasic_direct_url }}"
+            dest: "{{ freebasic_tmpdir.path }}/{{ freebasic_archive_name }}"
+            mode: "0644"
+            timeout: 300
+            follow: yes
+          register: download_result
+          ignore_errors: true
+
+        - name: Check if primary download succeeded
+          ansible.builtin.stat:
+            path: "{{ freebasic_tmpdir.path }}/{{ freebasic_archive_name }}"
+          register: primary_file_stat
+
+        - name: Set archive name for primary download
+          set_fact:
+            freebasic_final_archive_name: "{{ freebasic_archive_name }}"
+            freebasic_final_direct_url: "{{ freebasic_direct_url }}"
+          when: primary_file_stat.stat.exists | default(false)
+
+        - name: Try to download FreeBASIC archive (fallback URL)
+          get_url:
+            url: "{{ freebasic_direct_url_fallback }}"
+            dest: "{{ freebasic_tmpdir.path }}/{{ freebasic_archive_name_fallback }}"
+            mode: "0644"
+            timeout: 300
+            follow: yes
+          when: not (primary_file_stat.stat.exists | default(false))
+          register: download_result_fallback
+          ignore_errors: true
+
+        - name: Check if fallback download succeeded
+          ansible.builtin.stat:
+            path: "{{ freebasic_tmpdir.path }}/{{ freebasic_archive_name_fallback }}"
+          register: fallback_file_stat
+          when: not (primary_file_stat.stat.exists | default(false))
+
+        - name: Set archive name for fallback download
+          set_fact:
+            freebasic_final_archive_name: "{{ freebasic_archive_name_fallback }}"
+            freebasic_final_direct_url: "{{ freebasic_direct_url_fallback }}"
+          when: (not (primary_file_stat.stat.exists | default(false))) and (fallback_file_stat.stat.exists | default(false))
+
+        - name: Fail if download failed
+          ansible.builtin.fail:
+            msg: "Failed to download FreeBASIC archive. Tried: {{ freebasic_direct_url }} and {{ freebasic_direct_url_fallback }}"
+          when: (not (primary_file_stat.stat.exists | default(false))) and (not (fallback_file_stat.stat.exists | default(false)))
+
+        - name: Unpack FreeBASIC archive
+          ansible.builtin.unarchive:
+            src: "{{ freebasic_tmpdir.path }}/{{ freebasic_final_archive_name }}"
+            dest: "{{ freebasic_tmpdir.path }}"
+            remote_src: true
+
+        - name: Find FreeBASIC installation directory
+          ansible.builtin.find:
+            paths: "{{ freebasic_tmpdir.path }}"
+            patterns: "FreeBASIC-*"
+            file_type: directory
+          register: freebasic_extracted_dirs
+
+        - name: Set FreeBASIC source directory
+          set_fact:
+            freebasic_src_dir: "{{ freebasic_extracted_dirs.files[0].path }}"
+          when: freebasic_extracted_dirs.files | length > 0
+
+        - name: Fail if FreeBASIC directory not found
+          ansible.builtin.fail:
+            msg: "Failed to find FreeBASIC directory in extracted archive"
+          when: freebasic_extracted_dirs.files | length == 0
+
+        - name: Check if install.sh exists
+          ansible.builtin.stat:
+            path: "{{ freebasic_src_dir }}/install.sh"
+          register: install_script_stat
+
+        - name: Run FreeBASIC install script
+          command: ./install.sh -i /usr/local
+          args:
+            chdir: "{{ freebasic_src_dir }}"
+            creates: /usr/local/bin/fbc
+          when: install_script_stat.stat.exists | default(false)
+
+        - name: Verify fbc installation
+          command: fbc --version
+          register: fbc_version_check
+          changed_when: false
+
+        - name: Show fbc version
+          debug:
+            msg: "FreeBASIC installed: {{ fbc_version_check.stdout }}"
+
+      when: not fbc_installed | default(false)
+
+    - name: Ensure BASIC scripts directory exists
+      ansible.builtin.file:
+        path: "{{ basic_scripts_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Ensure kernels directory exists
+      ansible.builtin.file:
+        path: "{{ hub_kernels_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Ensure BASIC kernel directory exists
+      ansible.builtin.file:
+        path: "{{ basic_kernel_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create BASIC kernel wrapper script
+      template:
+        src: basic_kernel.py.j2
+        dest: "{{ basic_scripts_dir }}/basic_kernel.py"
+        mode: "0755"
+
+    - name: Install ipykernel if not present
+      ansible.builtin.pip:
+        name: ipykernel
+        executable: "{{ hub_pip }}"
+
+    - name: Create BASIC kernel.json
+      copy:
+        dest: "{{ basic_kernel_dir }}/kernel.json"
+        mode: "0644"
+        content: |
+          {
+            "argv": [
+              "{{ hub_python }}",
+              "{{ basic_scripts_dir }}/basic_kernel.py",
+              "-f",
+              "{connection_file}"
+            ],
+            "display_name": "{{ basic_kernel_display_name }}",
+            "language": "basic",
+            "mimetype": "text/x-basic",
+            "file_extension": ".bas"
+          }
+
+    - name: Show resulting kernel info
+      debug:
+        msg:
+          hub_venv_dir: "{{ hub_venv_dir }}"
+          kernel_id: "{{ basic_kernel_id }}"
+          kernel_dir: "{{ basic_kernel_dir }}"
+          freebasic_package: "{{ freebasic_package }}"
+          basic_bin_dir: "{{ basic_bin_dir }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_basic.ipynb.j2
+        dest: "{{ admin_home }}/sample_basic.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

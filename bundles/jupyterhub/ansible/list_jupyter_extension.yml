@@ -1,0 +1,63 @@
+---
+- name: List Jupyter extension
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    # ------ compute derived vars for this block ------
+    - name: Get vars and list extensions
+      vars:
+        kernel_name: "{{ job.config.kernel_name }}"
+        venvs_root: "{{ job.config.venvs_root | default('/opt/jupyter_venvs', true) }}"
+        hub_venv_dir: >-
+          {{
+            (
+              (service is defined and service.config is defined and service.config.venv_dir is defined and service.config.venv_dir)
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+        hub_python: "{{ hub_venv_dir }}/bin/python"
+        hub_jupyter: "{{ hub_venv_dir }}/bin/jupyter"
+        hub_pip: "{{ hub_venv_dir }}/bin/pip"
+      block:
+        - name: Ensure venvs_root exists
+          ansible.builtin.file:
+            path: "{{ venvs_root }}"
+            state: directory
+            mode: "0755"
+
+        - name: Debug incoming vars
+          debug:
+            msg:
+              hub_python: "{{ hub_python | default('—', true) }}"
+              hub_jupyter: "{{ hub_jupyter | default('—', true) }}"
+              hub_pip: "{{ hub_pip | default('—', true) }}"
+              
+        - name: jupyter server extension list (print)
+          command: "{{ hub_jupyter }} server extension list"
+          register: _srv_list
+          changed_when: false
+          failed_when: false
+
+        - name: Print server extension list
+          debug:
+            msg: "{{ _srv_list.stdout }}"
+            
+        - name: jupyter labextension list (print)
+          command: "{{ hub_jupyter }} labextension list"
+          register: _srv_list2
+          changed_when: false
+          failed_when: false
+
+        - name: Print labextension list
+          debug:
+            msg: "{{ _srv_list2.stdout }}"

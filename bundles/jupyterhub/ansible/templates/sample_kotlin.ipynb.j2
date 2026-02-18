@@ -1,0 +1,694 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "intro",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на Kotlin"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example1-title",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "example1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from Kotlin!\n",
+      "Welcome to Kotlin kernel in Jupyter.\n",
+      "Kotlin version: 2.2.20\n"
+     ]
+    }
+   ],
+   "source": [
+    "println(\"Hello from Kotlin!\")\n",
+    "println(\"Welcome to Kotlin kernel in Jupyter.\")\n",
+    "println(\"Kotlin version: ${KotlinVersion.CURRENT}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example2-title",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "example2",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum: 42\n",
+      "Product: 405\n",
+      "Division: 0.5555555555555556\n",
+      "Power: 225.0\n",
+      "Square root of 15: 3.872983346207417\n"
+     ]
+    }
+   ],
+   "source": [
+    "val a = 15\n",
+    "val b = 27\n",
+    "val sum = a + b\n",
+    "val product = a * b\n",
+    "\n",
+    "println(\"a = $a\")\n",
+    "println(\"b = $b\")\n",
+    "println(\"Sum: $sum\")\n",
+    "println(\"Product: $product\")\n",
+    "println(\"Division: ${a.toDouble() / b}\")\n",
+    "println(\"Power: ${Math.pow(a.toDouble(), 2.0)}\")\n",
+    "println(\"Square root of $a: ${Math.sqrt(a.toDouble())}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example3-title",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа со списками и коллекциями"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "example3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "List: [10, 20, 30, 40, 50]\n",
+      "Sum: 150\n",
+      "Max: 50\n",
+      "Min: 10\n",
+      "Average: 30.0\n",
+      "\n",
+      "Mutable list: [1, 2, 3, 4, 5]\n",
+      "Squares: [100, 400, 900, 1600, 2500]\n",
+      "Even numbers: [10, 20, 30, 40, 50]\n"
+     ]
+    }
+   ],
+   "source": [
+    "val numbers = listOf(10, 20, 30, 40, 50)\n",
+    "println(\"List: $numbers\")\n",
+    "println(\"Sum: ${numbers.sum()}\")\n",
+    "println(\"Max: ${numbers.maxOrNull()}\")\n",
+    "println(\"Min: ${numbers.minOrNull()}\")\n",
+    "println(\"Average: ${numbers.average()}\")\n",
+    "\n",
+    "// Mutable list\n",
+    "val mutableList = mutableListOf(1, 2, 3)\n",
+    "mutableList.add(4)\n",
+    "mutableList.add(5)\n",
+    "println(\"\\nMutable list: $mutableList\")\n",
+    "\n",
+    "// Map operations\n",
+    "val squares = numbers.map { it * it }\n",
+    "println(\"Squares: $squares\")\n",
+    "\n",
+    "// Filter operations\n",
+    "val evenNumbers = numbers.filter { it % 2 == 0 }\n",
+    "println(\"Even numbers: $evenNumbers\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example4-title",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Функции и рекурсия"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "example4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of 5 is 120\n",
+      "\n",
+      "First 10 Fibonacci numbers:\n",
+      "0 1 1 2 3 5 8 13 21 34 \n"
+     ]
+    }
+   ],
+   "source": [
+    "// Функция для вычисления факториала\n",
+    "fun factorial(n: Int): Long {\n",
+    "    return if (n <= 1) 1 else n * factorial(n - 1)\n",
+    "}\n",
+    "\n",
+    "// Функция для вычисления чисел Фибоначчи\n",
+    "fun fibonacci(n: Int): Int {\n",
+    "    return if (n <= 1) n else fibonacci(n - 1) + fibonacci(n - 2)\n",
+    "}\n",
+    "\n",
+    "val num = 5\n",
+    "println(\"Factorial of $num is ${factorial(num)}\")\n",
+    "\n",
+    "println(\"\\nFirst 10 Fibonacci numbers:\")\n",
+    "for (i in 0..9) {\n",
+    "    print(\"${fibonacci(i)} \")\n",
+    "}\n",
+    "println()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example5-title",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "example5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original string: Kotlin Programming\n",
+      "Length: 18\n",
+      "Uppercase: KOTLIN PROGRAMMING\n",
+      "Lowercase: kotlin programming\n",
+      "Greeting: Hello, Kotlin Programming!\n",
+      "Words: [Kotlin, Programming]\n",
+      "String contains 'Kotlin'\n",
+      "\n",
+      "Sum of 10 and 20 is 30\n"
+     ]
+    }
+   ],
+   "source": [
+    "val name = \"Kotlin Programming\"\n",
+    "println(\"Original string: $name\")\n",
+    "println(\"Length: ${name.length}\")\n",
+    "println(\"Uppercase: ${name.uppercase()}\")\n",
+    "println(\"Lowercase: ${name.lowercase()}\")\n",
+    "\n",
+    "val greeting = \"Hello, $name!\"\n",
+    "println(\"Greeting: $greeting\")\n",
+    "\n",
+    "// Разделение строки\n",
+    "val words = name.split(\" \")\n",
+    "println(\"Words: $words\")\n",
+    "\n",
+    "// Проверка содержимого\n",
+    "if (name.contains(\"Kotlin\")) {\n",
+    "    println(\"String contains 'Kotlin'\")\n",
+    "}\n",
+    "\n",
+    "// String templates\n",
+    "val x = 10\n",
+    "val y = 20\n",
+    "println(\"\\nSum of $x and $y is ${x + y}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example6-title",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Data классы и объектно-ориентированное программирование"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "id": "example6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "Name: Alice\n",
+      "Age: 30\n",
+      "City: Moscow\n",
+      "\n",
+      "ToString: Person(name=Alice, age=30, city=Moscow)\n",
+      "\n",
+      "Copied person with age changed: Person(name=Alice, age=31, city=Moscow)\n",
+      "\n",
+      "Destructured: name=Alice, age=30, city=Moscow\n"
+     ]
+    }
+   ],
+   "source": [
+    "// Data class\n",
+    "data class Person(val name: String, val age: Int, val city: String) {\n",
+    "    fun displayInfo() {\n",
+    "        println(\"Name: $name\")\n",
+    "        println(\"Age: $age\")\n",
+    "        println(\"City: $city\")\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "val person = Person(\"Alice\", 30, \"Moscow\")\n",
+    "println(\"Person information:\")\n",
+    "person.displayInfo()\n",
+    "println(\"\\nToString: $person\")\n",
+    "\n",
+    "// Copy method (data class feature)\n",
+    "val person2 = person.copy(age = 31)\n",
+    "println(\"\\nCopied person with age changed: $person2\")\n",
+    "\n",
+    "// Destructuring\n",
+    "val (name, age, city) = person\n",
+    "println(\"\\nDestructured: name=$name, age=$age, city=$city\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example7-title",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Map и работа с коллекциями"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "id": "example7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "  name: Alice\n",
+      "  age: 30\n",
+      "  city: Moscow\n",
+      "  languages: [Kotlin, Java, Python]\n",
+      "\n",
+      "Number of languages: 3\n",
+      "\n",
+      "Mutable map: {a=1, b=2, c=3}\n"
+     ]
+    }
+   ],
+   "source": [
+    "val person = mapOf(\n",
+    "    \"name\" to \"Alice\",\n",
+    "    \"age\" to 30,\n",
+    "    \"city\" to \"Moscow\",\n",
+    "    \"languages\" to listOf(\"Kotlin\", \"Java\", \"Python\")\n",
+    ")\n",
+    "\n",
+    "println(\"Person information:\")\n",
+    "person.forEach { (key, value) ->\n",
+    "    println(\"  $key: $value\")\n",
+    "}\n",
+    "\n",
+    "val languages = person[\"languages\"] as? List<*>\n",
+    "println(\"\\nNumber of languages: ${languages?.size ?: 0}\")\n",
+    "\n",
+    "// Mutable map\n",
+    "val mutableMap = mutableMapOf(\"a\" to 1, \"b\" to 2)\n",
+    "mutableMap[\"c\"] = 3\n",
+    "println(\"\\nMutable map: $mutableMap\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example8-title",
+   "metadata": {},
+   "source": [
+    "## Пример 8: Работа с датами и временем"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "id": "example8",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Current date and time: 2025-11-23T06:48:47.523625453\n",
+      "Formatted: 2025-11-23 06:48:47\n",
+      "In 7 days and 3 hours: 2025-11-30 09:48:47\n",
+      "Days since 2020-01-01: 2153\n"
+     ]
+    }
+   ],
+   "source": [
+    "import java.time.*\n",
+    "import java.time.format.DateTimeFormatter\n",
+    "import java.time.temporal.ChronoUnit\n",
+    "\n",
+    "val now = LocalDateTime.now()\n",
+    "println(\"Current date and time: $now\")\n",
+    "\n",
+    "val formatter = DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm:ss\")\n",
+    "println(\"Formatted: ${now.format(formatter)}\")\n",
+    "\n",
+    "// Добавление времени\n",
+    "val future = now.plusDays(7).plusHours(3)\n",
+    "println(\"In 7 days and 3 hours: ${future.format(formatter)}\")\n",
+    "\n",
+    "// Разница во времени\n",
+    "val past = LocalDate.of(2020, 1, 1)\n",
+    "val today = LocalDate.now()\n",
+    "val days = ChronoUnit.DAYS.between(past, today)\n",
+    "println(\"Days since 2020-01-01: $days\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example9-title",
+   "metadata": {},
+   "source": [
+    "## Пример 9: Обработка исключений"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "id": "example9",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Index out of range: Index 5 out of bounds for length 3\n",
+      "Finally block executed.\n",
+      "Division by zero: / by zero\n"
+     ]
+    }
+   ],
+   "source": [
+    "try {\n",
+    "    val numbers = arrayOf(1, 2, 3)\n",
+    "    println(\"Number at index 5: ${numbers[5]}\") // ArrayIndexOutOfBoundsException\n",
+    "} catch (e: ArrayIndexOutOfBoundsException) {\n",
+    "    println(\"Index out of range: ${e.message}\")\n",
+    "} catch (e: Exception) {\n",
+    "    println(\"General error: ${e.message}\")\n",
+    "} finally {\n",
+    "    println(\"Finally block executed.\")\n",
+    "}\n",
+    "\n",
+    "// Деление на ноль\n",
+    "try {\n",
+    "    val result = 10 / 0\n",
+    "} catch (e: ArithmeticException) {\n",
+    "    println(\"Division by zero: ${e.message}\")\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example10-title",
+   "metadata": {},
+   "source": [
+    "## Пример 10: Расширения функций (Extension Functions)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "id": "example10",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original: 'Hello World'\n",
+      "Without spaces: 'HelloWorld'\n",
+      "\n",
+      "42 is even: true\n",
+      "Second element: 20\n"
+     ]
+    }
+   ],
+   "source": [
+    "// Extension function для String\n",
+    "fun String.removeSpaces(): String = this.replace(\" \", \"\")\n",
+    "\n",
+    "// Extension function для Int\n",
+    "fun Int.isEven(): Boolean = this % 2 == 0\n",
+    "\n",
+    "// Extension function для List\n",
+    "fun <T> List<T>.secondOrNull(): T? = if (this.size >= 2) this[1] else null\n",
+    "\n",
+    "val text = \"Hello World\"\n",
+    "println(\"Original: '$text'\")\n",
+    "println(\"Without spaces: '${text.removeSpaces()}'\")\n",
+    "\n",
+    "val number = 42\n",
+    "println(\"\\n$number is even: ${number.isEven()}\")\n",
+    "\n",
+    "val list = listOf(10, 20, 30)\n",
+    "println(\"Second element: ${list.secondOrNull()}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example11-title",
+   "metadata": {},
+   "source": [
+    "## Пример 11: Работа с файлами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "example11",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "File content:\n",
+      "Hello from Kotlin!\n",
+      "This is a test file.\n",
+      "File I/O example.\n",
+      "\n",
+      "File size: 57 bytes\n",
+      "\n",
+      "File lines:\n",
+      "  1: Hello from Kotlin!\n",
+      "  2: This is a test file.\n",
+      "  3: File I/O example.\n",
+      "\n",
+      "File deleted.\n"
+     ]
+    }
+   ],
+   "source": [
+    "import java.io.File\n",
+    "\n",
+    "val filename = \"${System.getProperty(\"java.io.tmpdir\")}/test_kotlin_file.txt\"\n",
+    "\n",
+    "// Запись в файл\n",
+    "File(filename).writeText(\"\"\"\n",
+    "    Hello from Kotlin!\n",
+    "    This is a test file.\n",
+    "    File I/O example.\n",
+    "\"\"\".trimIndent())\n",
+    "\n",
+    "// Чтение из файла\n",
+    "val content = File(filename).readText()\n",
+    "println(\"File content:\")\n",
+    "println(content)\n",
+    "\n",
+    "val file = File(filename)\n",
+    "println(\"\\nFile size: ${file.length()} bytes\")\n",
+    "\n",
+    "// Чтение построчно\n",
+    "println(\"\\nFile lines:\")\n",
+    "File(filename).readLines().forEachIndexed { index, line ->\n",
+    "    println(\"  ${index + 1}: $line\")\n",
+    "}\n",
+    "\n",
+    "// Удаление файла\n",
+    "file.delete()\n",
+    "println(\"\\nFile deleted.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example12-title",
+   "metadata": {},
+   "source": [
+    "## Пример 12: Использование библиотек (krangl и lets-plot)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "id": "example12",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "@file:Repository(\"file:///opt/jupyterhub/maven-local\")\n",
+    "@file:Repository(\"https://repo1.maven.org/maven2\")\n",
+    "@file:Repository(\"https://maven.pkg.jetbrains.space/public/p/lets-plot/maven\")\n",
+    "@file:DependsOn(\"com.github.holgerbrandl:krangl:0.18.4\")\n",
+    "@file:DependsOn(\"org.jetbrains.lets-plot:lets-plot-kotlin-jvm:4.11.0\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "id": "example12-code",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Totals by category:\n",
+      " - Books: 210.00 USD\n",
+      " - Gadgets: 460.50 USD\n",
+      " - Office: 75.00 USD\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "Plot(data={category=[Ljava.lang.String;@612c288b, total=[Ljava.lang.Double;@7743d45e}, mapping=org.jetbrains.letsPlot.intern.Options@178541bc, features=[org.jetbrains.letsPlot.geom.geomBar@64c52ebc])"
+      ]
+     },
+     "execution_count": 32,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import java.util.Locale\n",
+    "import krangl.*\n",
+    "import org.jetbrains.letsPlot.*\n",
+    "import org.jetbrains.letsPlot.geom.*\n",
+    "\n",
+    "data class Sale(val category: String, val amount: Double)\n",
+    "\n",
+    "val sales = listOf(\n",
+    "    Sale(\"Books\", 120.0),\n",
+    "    Sale(\"Books\", 90.0),\n",
+    "    Sale(\"Gadgets\", 310.0),\n",
+    "    Sale(\"Gadgets\", 150.5),\n",
+    "    Sale(\"Office\", 75.0)\n",
+    ")\n",
+    "\n",
+    "val grouped = sales.groupBy { it.category }\n",
+    "    .mapValues { (_, rows) -> rows.sumOf { it.amount } }\n",
+    "    .toList()\n",
+    "\n",
+    "val flattened = grouped.flatMap { listOf(it.first, it.second) }\n",
+    "val df = dataFrameOf(\"category\", \"total\")(*flattened.toTypedArray())\n",
+    "\n",
+    "val plot = letsPlot(df.toMap()) + geomBar(stat = Stat.identity) {\n",
+    "    x = \"category\"; y = \"total\"\n",
+    "}\n",
+    "\n",
+    "println(\"Totals by category:\")\n",
+    "grouped.forEach { (category, total) ->\n",
+    "    val formatted = String.format(Locale.US, \"%,.2f\", total)\n",
+    "    println(\" - $category: $formatted USD\")\n",
+    "}\n",
+    "\n",
+    "plot"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example13-title",
+   "metadata": {},
+   "source": [
+    "## Пример 13: Переменные окружения и системные свойства"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "id": "example13",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Kotlin libraries directory: /opt/jupyterhub/kotlin-libraries\n",
+      "Java version: 17.0.16\n",
+      "Java home: /usr/lib/jvm/java-17-openjdk-amd64\n",
+      "OS name: Linux\n",
+      "OS version: 5.15.0-130-generic\n"
+     ]
+    }
+   ],
+   "source": [
+    "println(\"Kotlin libraries directory: ${System.getenv(\"KOTLIN_JUPYTER_LIBRARIES_DIR\")}\")\n",
+    "println(\"Java version: ${System.getProperty(\"java.version\")}\")\n",
+    "println(\"Java home: ${System.getProperty(\"java.home\")}\")\n",
+    "println(\"OS name: ${System.getProperty(\"os.name\")}\")\n",
+    "println(\"OS version: ${System.getProperty(\"os.version\")}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8ee758da-cbe9-4ad4-9b8b-ed536164d97d",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Kotlin",
+   "language": "kotlin",
+   "name": "kotlin"
+  },
+  "language_info": {
+   "codemirror_mode": "text/x-kotlin",
+   "file_extension": ".kt",
+   "mimetype": "text/x-kotlin",
+   "name": "kotlin",
+   "nbconvert_exporter": "",
+   "pygments_lexer": "kotlin",
+   "version": "2.2.20-Beta2"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

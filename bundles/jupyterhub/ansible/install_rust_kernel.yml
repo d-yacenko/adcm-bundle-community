@@ -1,0 +1,211 @@
+# ansible/install_rust_kernel.yml
+---
+- name: Install Rust (evcxr) kernel into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      ansible.builtin.fail:
+        msg: "install_rust_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Determine Rust tool directories
+      set_fact:
+        rust_toolchain: "{{ (job.config.rust_toolchain | default('stable', true) | trim) or 'stable' }}"
+        rustup_script_url: "{{ (job.config.rustup_url | default('https://sh.rustup.rs', true) | trim) or 'https://sh.rustup.rs' }}"
+        rust_kernel_id: "{{ (job.config.kernel_id | default('evcxr_jupyter', true) | trim) or 'evcxr_jupyter' }}"
+        rust_kernel_display_name: "{{ (job.config.kernel_display_name | default('Rust (evcxr)', true) | trim) or 'Rust (evcxr)' }}"
+        rustup_home: "{{ (job.config.rustup_home | default('/opt/jupyterhub/rustup', true) | trim) or '/opt/jupyterhub/rustup' }}"
+        cargo_bin_dir: "{{ (job.config.cargo_bin_dir | default('/opt/jupyterhub/cargo/bin', true) | trim) or '/opt/jupyterhub/cargo/bin' }}"
+        rust_env_home: "{{ (job.config.rust_env_home | default('/opt/jupyterhub/rust-home', true) | trim) or '/opt/jupyterhub/rust-home' }}"
+
+    - name: Derive runtime variables
+      set_fact:
+        hub_bin_dir: "{{ hub_venv_dir.rstrip('/') }}/bin"
+        rust_toolchain: "{{ (job.config.rust_toolchain | default('stable', true) | trim) or 'stable' }}"
+        hub_kernels_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels"
+        evcxr_kernel_dest_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels/{{ rust_kernel_id }}"
+        cargo_home: "{{ cargo_bin_dir | regex_replace('/bin$', '') }}"
+        evcxr_kernel_src_dir: "{{ rust_env_home.rstrip('/') }}/.local/share/jupyter/kernels/rust"
+
+    - name: Build Rust environment defaults
+      set_fact:
+        rust_env_base:
+          CARGO_HOME: "{{ cargo_home }}"
+          RUSTUP_HOME: "{{ rustup_home }}"
+          HOME: "{{ rust_env_home }}"
+          USER: "root"
+
+    - name: Ensure base toolchain packages are present
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - pkg-config
+          - libssl-dev
+          - curl
+        state: present
+        update_cache: true
+
+    - name: Ensure cargo/rustup directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "admin"
+        group: "user"
+        mode: "0775"
+        recurse: true
+      loop:
+        - "{{ rustup_home }}"
+        - "{{ cargo_home }}"
+        - "{{ cargo_bin_dir }}"
+        - "{{ rust_env_home }}"
+        - "{{ rust_env_home.rstrip('/') }}/.local"
+        - "{{ rust_env_home.rstrip('/') }}/.local/share"
+        - "{{ rust_env_home.rstrip('/') }}/.local/share/jupyter"
+        - "{{ rust_env_home.rstrip('/') }}/.local/share/jupyter/kernels"
+
+    - name: Install rustup (if cargo absent)
+      shell: |
+        set -o pipefail
+        curl --proto '=https' --tlsv1.2 -sSf {{ rustup_script_url }} | \
+          sh -s -- --default-toolchain {{ rust_toolchain }} -y --no-modify-path
+      args:
+        creates: "{{ cargo_bin_dir }}/cargo"
+        executable: /bin/bash
+      environment: "{{ rust_env_base | combine({'PATH': cargo_bin_dir ~ ':/usr/local/bin:/usr/bin:/bin'}) }}"
+
+    - name: Ensure cargo path exists
+      ansible.builtin.stat:
+        path: "{{ cargo_bin_dir }}/cargo"
+      register: cargo_bin_stat
+
+    - name: Fail when cargo binary missing
+      ansible.builtin.fail:
+        msg: "cargo binary not found at {{ cargo_bin_dir }}/cargo. Check rustup installation."
+      when: not cargo_bin_stat.stat.exists
+
+    - name: Install evcxr_jupyter via cargo
+      command: "{{ cargo_bin_dir }}/cargo install evcxr_jupyter --force"
+      environment: "{{ rust_env_base | combine({'PATH': cargo_bin_dir ~ ':/usr/local/bin:/usr/bin:/bin'}) }}"
+
+    - name: Install evcxr Jupyter kernelspec
+      command: "{{ cargo_bin_dir }}/evcxr_jupyter --install --force"
+      environment: "{{ rust_env_base | combine({'PATH': hub_bin_dir ~ ':' ~ cargo_bin_dir ~ ':/usr/local/bin:/usr/bin:/bin', 'JUPYTER_PATH': rust_env_home.rstrip('/') ~ '/.local/share/jupyter'}) }}"
+
+    - name: Ensure evcxr kernel spec created under source path
+      ansible.builtin.stat:
+        path: "{{ evcxr_kernel_src_dir }}/kernel.json"
+      register: evcxr_kernel_stat
+
+    - name: Fail if evcxr kernel spec missing
+      ansible.builtin.fail:
+        msg: "evcxr kernel was not installed under {{ evcxr_kernel_src_dir }}"
+      when: not evcxr_kernel_stat.stat.exists
+
+    - name: Ensure destination kernel directory exists
+      ansible.builtin.file:
+        path: "{{ evcxr_kernel_dest_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Sync evcxr kernelspec into hub venv
+      copy:
+        src: "{{ evcxr_kernel_src_dir }}/"
+        dest: "{{ evcxr_kernel_dest_dir }}/"
+        owner: root
+        group: root
+        mode: "0755"
+        remote_src: true
+
+    - name: Copy evcxr binary into hub venv
+      copy:
+        src: "{{ cargo_bin_dir }}/evcxr_jupyter"
+        dest: "{{ hub_bin_dir }}/evcxr_jupyter"
+        mode: "0755"
+        remote_src: true
+
+    - name: Build evcxr kernel spec content
+      set_fact:
+        evcxr_kernel_spec:
+          argv:
+            - "{{ hub_bin_dir }}/evcxr_jupyter"
+            - "--control_file"
+            - "{connection_file}"
+          display_name: "{{ rust_kernel_display_name }}"
+          language: "rust"
+          interrupt_mode: "message"
+          env:
+            PATH: "{{ cargo_bin_dir }}:{{ hub_bin_dir }}:/usr/local/bin:/usr/bin:/bin"
+            RUSTUP_HOME: "{{ rustup_home }}"
+            CARGO_HOME: "{{ cargo_home }}"
+            HOME: "{{ rust_env_home }}"
+
+    - name: Overwrite kernel.json with updated binary path
+      copy:
+        dest: "{{ evcxr_kernel_dest_dir }}/kernel.json"
+        mode: "0644"
+        content: "{{ evcxr_kernel_spec | to_nice_json }}"
+
+    - name: Ensure Rust kernel directory is world-readable
+      ansible.builtin.file:
+        path: "{{ evcxr_kernel_dest_dir }}"
+        mode: "0755"
+        recurse: true
+
+    - name: Show resulting kernel info
+      debug:
+        msg:
+          hub_venv_dir: "{{ hub_venv_dir }}"
+          cargo_bin_dir: "{{ cargo_bin_dir }}"
+          rust_toolchain: "{{ rust_toolchain }}"
+          rustup_home: "{{ rustup_home }}"
+          rust_env_home: "{{ rust_env_home }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_rust.ipynb.j2
+        dest: "{{ admin_home }}/sample_rust.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

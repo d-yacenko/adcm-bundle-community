@@ -1,0 +1,168 @@
+# ansible/install_fortran_kernel.yml
+---
+- name: Install FORTRAN (gfortran) kernel into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      ansible.builtin.fail:
+        msg: "install_fortran_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Derive runtime variables
+      set_fact:
+        hub_bin_dir: "{{ hub_venv_dir.rstrip('/') }}/bin"
+        hub_python: "{{ hub_venv_dir.rstrip('/') }}/bin/python3"
+        hub_pip: "{{ hub_venv_dir.rstrip('/') }}/bin/pip"
+        fortran_kernel_id: >-
+          {{
+            (job.config.kernel_id | default('fortran', true) | trim) or 'fortran'
+          }}
+        fortran_kernel_display_name: >-
+          {{
+            (job.config.kernel_display_name | default('FORTRAN (gfortran)', true) | trim) or 'FORTRAN (gfortran)'
+          }}
+        gfortran_package: >-
+          {{
+            (job.config.gfortran_package | default('gfortran', true) | trim) or 'gfortran'
+          }}
+        fortran_apt_packages_raw: "{{ job.config.apt_packages | default([], true) }}"
+        fortran_bin_dir: >-
+          {{
+            (job.config.fortran_bin_dir | default('/opt/jupyterhub/fortran', true) | trim) or '/opt/jupyterhub/fortran'
+          }}
+
+    - name: Build kernel directories
+      set_fact:
+        hub_kernels_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels"
+        fortran_kernel_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels/{{ fortran_kernel_id }}"
+        fortran_scripts_dir: "{{ fortran_bin_dir.rstrip('/') }}/scripts"
+
+    - name: Normalize apt packages list
+      set_fact:
+        fortran_apt_packages: >-
+          {{
+            (fortran_apt_packages_raw if (fortran_apt_packages_raw is iterable and (fortran_apt_packages_raw | length) > 0)
+             else [gfortran_package])
+          }}
+
+    - name: Ensure hub python exists
+      ansible.builtin.stat:
+        path: "{{ hub_python }}"
+      register: hub_python_stat
+
+    - name: Fail if hub python missing
+      ansible.builtin.fail:
+        msg: "Python interpreter {{ hub_python }} not found. Ensure JupyterHub venv exists."
+      when: not hub_python_stat.stat.exists
+
+    - name: Install required APT packages for gfortran
+      ansible.builtin.apt:
+        name: "{{ fortran_apt_packages }}"
+        state: present
+        update_cache: true
+
+    - name: Ensure FORTRAN scripts directory exists
+      ansible.builtin.file:
+        path: "{{ fortran_scripts_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Ensure kernels directory exists
+      ansible.builtin.file:
+        path: "{{ hub_kernels_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Ensure FORTRAN kernel directory exists
+      ansible.builtin.file:
+        path: "{{ fortran_kernel_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create FORTRAN kernel wrapper script
+      template:
+        src: fortran_kernel.py.j2
+        dest: "{{ fortran_scripts_dir }}/fortran_kernel.py"
+        mode: "0755"
+
+    - name: Install ipykernel if not present
+      ansible.builtin.pip:
+        name: ipykernel
+        executable: "{{ hub_pip }}"
+
+    - name: Create FORTRAN kernel.json
+      copy:
+        dest: "{{ fortran_kernel_dir }}/kernel.json"
+        mode: "0644"
+        content: |
+          {
+            "argv": [
+              "{{ hub_python }}",
+              "{{ fortran_scripts_dir }}/fortran_kernel.py",
+              "-f",
+              "{connection_file}"
+            ],
+            "display_name": "{{ fortran_kernel_display_name }}",
+            "language": "fortran",
+            "mimetype": "text/x-fortran",
+            "file_extension": ".f90"
+          }
+
+    - name: Show resulting kernel info
+      debug:
+        msg:
+          hub_venv_dir: "{{ hub_venv_dir }}"
+          kernel_id: "{{ fortran_kernel_id }}"
+          kernel_dir: "{{ fortran_kernel_dir }}"
+          gfortran_package: "{{ gfortran_package }}"
+          fortran_bin_dir: "{{ fortran_bin_dir }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_fortran.ipynb.j2
+        dest: "{{ admin_home }}/sample_fortran.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

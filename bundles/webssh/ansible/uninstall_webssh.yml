@@ -1,0 +1,47 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    webssh_service: "{{ services.webssh.config.systemd_unit }}"
+  tasks:
+    - name: Stop WebSSH service (best-effort)
+      systemd:
+        name: "{{ webssh_service }}"
+        state: stopped
+      ignore_errors: yes
+
+    - name: Disable WebSSH service
+      systemd:
+        name: "{{ webssh_service }}"
+        enabled: no
+      ignore_errors: yes
+
+    - name: Remove WebSSH systemd unit
+      file:
+        path: "/etc/systemd/system/{{ webssh_service }}.service"
+        state: absent
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+      changed_when: false
+
+    - name: Uninstall WebSSH Python package (best-effort)
+      pip:
+        name: webssh
+        state: absent
+        executable: pip3
+      ignore_errors: yes
+
+    - name: Uninstall ADCM status checker mapping for WebSSH
+      include_role:
+        name: status_checker
+        tasks_from: uninstall.yml
+      vars:
+        checker_type: services
+        service_name: "{{ webssh_service }}"
+        component_id: "{{ services.webssh.TTY.component_id }}"
+        host_id: "{{ adcm_hostid }}"
+
+

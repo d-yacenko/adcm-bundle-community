@@ -1,0 +1,194 @@
+# ansible/install_ijava_kernel.yml
+---
+- name: Install IJava kernel into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      ansible.builtin.fail:
+        msg: "install_ijava_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Derive runtime variables
+      set_fact:
+        hub_python: "{{ (hub_venv_dir.rstrip('/')) ~ '/bin/python3' }}"
+        jdk_package: "{{ (job.config.jdk_package | default('openjdk-17-jdk', true) | trim) or 'openjdk-17-jdk' }}"
+        ijava_version: "{{ (job.config.ijava_version | default('1.3.0', true) | trim) or '1.3.0' }}"
+        ijava_install_scope: "{{ (job.config.install_scope | default('--sys-prefix', true) | trim) or '--sys-prefix' }}"
+
+    - name: Determine download parameters
+      set_fact:
+        ijava_archive_url: >-
+          {{
+            (job.config.archive_url | default('', true) | trim)
+            or ('https://github.com/SpencerPark/IJava/releases/download/v' ~ ijava_version ~ '/ijava-' ~ ijava_version ~ '.zip')
+          }}
+        ijava_extract_subdir: >-
+          {{
+            (
+              (job.config.extract_subdir | default('', true) | trim)
+              or ('ijava-' ~ ijava_version)
+            ) | regex_replace('^/+','')
+          }}
+
+    - name: Ensure hub python exists
+      ansible.builtin.stat:
+        path: "{{ hub_python }}"
+      register: hub_python_stat
+
+    - name: Fail if hub python is missing
+      ansible.builtin.fail:
+        msg: "Python interpreter {{ hub_python }} not found. Ensure JupyterHub venv exists."
+      when: not hub_python_stat.stat.exists
+
+    - name: Install requested JDK package and unzip
+      ansible.builtin.apt:
+        name:
+          - "{{ jdk_package }}"
+          - unzip
+        state: present
+        update_cache: true
+
+    - name: Show java version
+      command: java -version
+      register: java_version_output
+      changed_when: false
+
+    - name: Ensure jshell module is present
+      shell: |
+        set -o pipefail
+        java --list-modules | grep -q jdk.jshell
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Install IJava kernel from release
+      block:
+        - name: Create temporary directory
+          ansible.builtin.tempfile:
+            state: directory
+            suffix: ijava
+          register: ijava_tmpdir
+
+        - name: Download IJava archive
+          ansible.builtin.get_url:
+            url: "{{ ijava_archive_url }}"
+            dest: "{{ ijava_tmpdir.path }}/ijava.zip"
+            mode: "0644"
+
+        - name: Unpack IJava archive
+          ansible.builtin.unarchive:
+            src: "{{ ijava_tmpdir.path }}/ijava.zip"
+            dest: "{{ ijava_tmpdir.path }}"
+            remote_src: true
+
+        - name: Build requested extraction path
+          set_fact:
+            ijava_requested_dir: "{{ ijava_tmpdir.path }}/{{ ijava_extract_subdir }}"
+
+        - name: Inspect requested directory
+          ansible.builtin.stat:
+            path: "{{ ijava_requested_dir }}"
+          register: ijava_requested_dir_stat
+
+        - name: Use requested directory when it exists
+          set_fact:
+            ijava_src_dir: "{{ ijava_requested_dir }}"
+          when: ijava_requested_dir_stat.stat.exists | default(false)
+
+        - name: Locate install.py automatically when directory missing
+          ansible.builtin.find:
+            paths: "{{ ijava_tmpdir.path }}"
+            patterns: install.py
+            recurse: true
+            file_type: file
+          register: ijava_install_find
+          when: ijava_src_dir is not defined
+
+        - name: Select path from discovered install.py
+          set_fact:
+            ijava_src_dir: "{{ (ijava_install_find.files[0].path | regex_replace('/[^/]+$', '')) }}"
+          when:
+            - ijava_src_dir is not defined
+            - (ijava_install_find.files | length) > 0
+
+        - name: Fail if install.py not found after extraction
+          ansible.builtin.fail:
+            msg: "install.py not found under {{ ijava_tmpdir.path }}. Check archive layout or override extract_subdir."
+          when: ijava_src_dir is not defined
+
+        - name: Check install.py presence
+          ansible.builtin.stat:
+            path: "{{ (ijava_src_dir.rstrip('/')) }}/install.py"
+          register: ijava_install_script
+
+        - name: Fail if install.py missing
+          ansible.builtin.fail:
+            msg: "install.py was not found under {{ ijava_src_dir }}."
+          when: not (ijava_install_script.stat.exists | default(false))
+
+        - name: Run IJava installer
+          command: "{{ hub_python }} install.py {{ ijava_install_scope }}"
+          args:
+            chdir: "{{ ijava_src_dir }}"
+
+      always:
+        - name: Clean up temporary directory
+          ansible.builtin.file:
+            path: "{{ ijava_tmpdir.path }}"
+            state: absent
+          when: ijava_tmpdir is defined and ijava_tmpdir.path is defined
+
+    - name: Show kernel directory for reference
+      debug:
+        msg:
+          hub_python: "{{ hub_python }}"
+          ijava_version: "{{ ijava_version }}"
+          archive_url: "{{ ijava_archive_url }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_java.ipynb.j2
+        dest: "{{ admin_home }}/sample_java.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

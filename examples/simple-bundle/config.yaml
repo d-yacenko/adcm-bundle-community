@@ -1,0 +1,150 @@
+---
+# Пример простого ADCM бандла
+# Документация: https://docs.arenadata.io/ru/ADCM/current/references/bundle-dsl.html
+
+- type: cluster
+  name: simple_service
+  version: 1.0.0
+  display_name: "Simple Service"
+  description: |
+    Пример простого сервиса для демонстрации возможностей ADCM.
+    Этот бандл показывает базовую структуру и основные концепции.
+  
+  # Минимальная версия ADCM для работы бандла
+  adcm_min_version: 2024.01.01.00
+  
+  # Лицензия (опционально)
+  license: LICENSE
+  
+  # Конфигурация кластера
+  config:
+    - name: service_settings
+      type: group
+      display_name: "Service Settings"
+      subs:
+        - name: port
+          type: integer
+          display_name: "Service Port"
+          description: "Port for service to listen on"
+          default: 8080
+          min: 1024
+          max: 65535
+          required: yes
+          
+        - name: bind_address
+          type: string
+          display_name: "Bind Address"
+          description: "IP address to bind service"
+          default: "0.0.0.0"
+          required: yes
+          
+        - name: log_level
+          type: option
+          display_name: "Log Level"
+          description: "Logging verbosity level"
+          option:
+            DEBUG: debug
+            INFO: info
+            WARNING: warning
+            ERROR: error
+          default: info
+          
+    - name: performance
+      type: group
+      display_name: "Performance Tuning"
+      subs:
+        - name: worker_threads
+          type: integer
+          display_name: "Worker Threads"
+          description: "Number of worker threads"
+          default: 4
+          min: 1
+          max: 128
+          
+        - name: enable_cache
+          type: boolean
+          display_name: "Enable Cache"
+          description: "Enable in-memory caching"
+          default: true
+  
+  # Действия (Actions)
+  actions:
+    install:
+      display_name: "Install Service"
+      description: "Install and configure the service on all hosts"
+      type: job
+      script_type: ansible
+      script: ansible/install.yaml
+      states:
+        available: [created]
+        on_success: installed
+        on_fail: created
+      
+    configure:
+      display_name: "Configure Service"
+      description: "Update service configuration"
+      type: job
+      script_type: ansible
+      script: ansible/configure.yaml
+      states:
+        available: [installed, configured]
+        on_success: configured
+      
+    start:
+      display_name: "Start Service"
+      description: "Start the service on all hosts"
+      type: job
+      script_type: ansible
+      script: ansible/start.yaml
+      states:
+        available: [installed, configured, stopped]
+        on_success: started
+      
+    stop:
+      display_name: "Stop Service"
+      description: "Stop the service on all hosts"
+      type: job
+      script_type: ansible
+      script: ansible/stop.yaml
+      states:
+        available: [started]
+        on_success: stopped
+      
+    restart:
+      display_name: "Restart Service"
+      description: "Restart the service on all hosts"
+      type: job
+      script_type: ansible
+      script: ansible/restart.yaml
+      states:
+        available: [started]
+        on_success: started
+      
+    check_status:
+      display_name: "Check Status"
+      description: "Check service health status"
+      type: job
+      script_type: ansible
+      script: ansible/check_status.yaml
+      states:
+        available: any
+
+# Определение сервиса
+- type: service
+  name: SIMPLE_SERVICE
+  version: 1.0.0
+  display_name: "Simple Service"
+  description: "Main service component"
+  
+  # Компоненты сервиса
+  components:
+    SERVER:
+      display_name: "Service Server"
+      description: "Main server component"
+      constraint: [1,+]  # Минимум 1, можно больше
+      
+    CLIENT:
+      display_name: "Service Client"
+      description: "Client component"
+      constraint: [0,+]  # Опционально, можно 0 или больше
+      monitoring: passive  # Не включать в мониторинг

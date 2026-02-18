@@ -1,0 +1,42 @@
+---
+- name: Debug incoming vars
+  debug:
+    msg:
+      passed_service_name: "{{ service_name | default('—', true) }}"
+      passed_component_id: "{{ component_id | default('—', true) }}"
+      passed_host_id: "{{ host_id | default('—', true) }}"
+
+- name: Ensure base directory for dedicated checkers exists
+  ansible.builtin.file:
+    path: /usr/lib/adcm-status-checker
+    state: directory
+    mode: '0755'
+
+- name: Define checker paths
+  set_fact:
+    checker_script_path: "/usr/lib/adcm-status-checker/checker-{{ component_id }}.sh"
+    checker_unit_name: "adcm-status-checker-{{ component_id }}"
+    checker_unit_path: "/etc/systemd/system/adcm-status-checker-{{ component_id }}.service"
+
+- name: Install dedicated checker script
+  template:
+    src: adcm-status-checker.sh.j2
+    dest: "{{ checker_script_path }}"
+    mode: '0755'
+
+- name: Install dedicated checker unit
+  template:
+    src: adcm-status-checker.service.j2
+    dest: "{{ checker_unit_path }}"
+    mode: '0644'
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Ensure dedicated ADCM status checker is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ checker_unit_name }}"
+    enabled: yes
+    state: started
+

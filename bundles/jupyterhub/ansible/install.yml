@@ -1,0 +1,285 @@
+---
+- hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    venv_dir: "{{ services.jupyterhub.config.venv_dir }}"
+    root_dir: "{{ services.jupyterhub.config.root_dir }}"
+    data_dir: "{{ services.jupyterhub.config.data_dir }}"
+    bind_host: "{{ services.jupyterhub.config.bind_host | default('') }}"
+    bind_port: "{{ services.jupyterhub.config.bind_port }}"
+    base_url: "{{ services.jupyterhub.config.base_url }}"
+    spawner_cmd: "{{ services.jupyterhub.config.spawner_cmd }}"
+    env_path: "{{ services.jupyterhub.config.env_path }}"
+    pam_service: "{{ services.jupyterhub.config.pam_service }}"
+    allow_all: "{{ services.jupyterhub.config.allow_all }}"
+    admin_users: "{{ services.jupyterhub.config.admin_users }}"
+    systemd_unit: "{{ services.jupyterhub.config.systemd_unit }}"
+    service_user: "{{ services.jupyterhub.config.service_user | default('root') | trim }}"
+
+  tasks:
+    # --- Предварительно подождём освобождения apt/dpkg ---
+    - name: Wait until apt/dpkg locks are free
+      shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+              fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+              fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
+          sleep 10
+        done
+      changed_when: false
+
+    - name: Ensure apt cache is updated
+      apt:
+        update_cache: yes
+        cache_valid_time: 600
+
+    - name: Install base packages (without nodejs/npm)
+      apt:
+        name:
+          - python3-venv
+          - python3-dev
+          - build-essential
+          - git
+          - curl
+          - software-properties-common
+        state: present
+
+    # --- Снести потенциальные конфликты из ubuntu-репо ---
+    #- name: Remove ubuntu nodejs/npm/libnode-dev to avoid dpkg overwrite
+    #  become: true
+    #  apt:
+    #    name:
+    #      - libnode-dev
+    #      - nodejs
+    #      - npm
+    #    state: absent
+    #    purge: yes
+    #  ignore_errors: true  # если чего-то нет — не падать
+
+    # На некоторых системах остаются заголовки
+    #- name: Ensure /usr/include/node is absent
+    #  become: true
+    #  file:
+    #    path: /usr/include/node
+    #    state: absent
+
+    # Перечистить осиротевшие зависимости
+    #- name: Autoremove residual packages
+    #  become: true
+    #  apt:
+    #    autoremove: yes
+    #    purge: yes
+
+    # === Удаление дистрибутивного NodeJS-стека (чисто без остатков) ===
+    - name: Clean distro NodeJS stack (quiet + idempotent)
+      when: ansible_facts['pkg_mgr'] == 'apt'
+      block:
+        # Снимаем hold c пакетов; тишина на любых исходах
+        - name: Unhold NodeJS packages (quiet no-op)
+          command: "apt-mark unhold {{ item }}"
+          loop:
+            - nodejs
+            - npm
+            - libnode-dev
+          register: unhold_out
+          failed_when: false
+          changed_when: false
+
+        # Удаляем даже если пакеты были "held" (без красных сообщений)
+        - name: Remove NodeJS stack (purge + autoremove, allow held)
+          shell: |
+            set -e
+            DEBIAN_FRONTEND=noninteractive \
+              apt-get -y --allow-change-held-packages remove nodejs npm libnode-dev || true
+            DEBIAN_FRONTEND=noninteractive \
+              apt-get -y autoremove --purge || true
+          args:
+            warn: false
+          register: apt_rm
+          changed_when: >
+            ('Removing' in (apt_rm.stdout | default(''))) or
+            ('The following packages will be REMOVED' in (apt_rm.stdout | default('')))
+          failed_when: false
+
+    #  rescue:
+    #    # На старых ansible/apt без параметра allow_change_held_packages — fallback без "fatal"
+    #    - name: Remove NodeJS stack (fallback with allow-change-held)
+    #      ansible.builtin.shell: >
+    #        DEBIAN_FRONTEND=noninteractive
+    #        apt-get -y --allow-change-held-packages remove nodejs npm libnode-dev || true
+    #      args:
+    #        warn: false
+    #      register: _apt_rm_fallback
+    #      changed_when: >
+    #        'The following packages will be REMOVED' in (_apt_rm_fallback.stdout | default(''))
+
+    #  when: ansible_facts['pkg_mgr'] == 'apt'
+    #  tags: ['nodejs_cleanup']
+
+    # --- Node.js 20.19.5 через NodeSource (nodistro) ---
+    - name: Ensure NodeSource keyring dir
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Add NodeSource GPG key
+      shell: |
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+          | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+      args:
+        creates: /etc/apt/keyrings/nodesource.gpg
+
+    - name: Add NodeSource 20.x repo (nodistro)
+      copy:
+        dest: /etc/apt/sources.list.d/nodesource.list
+        mode: '0644'
+        content: |
+          deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main
+
+    - name: apt update (after NodeSource)
+      apt:
+        update_cache: yes
+
+    - name: Resolve exact nodejs deb version for 20.19.5
+      shell: |
+        apt-cache policy nodejs \
+          | awk '/Candidate:/ {print $2} /^[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+/ {print $1}' \
+          | grep -m1 '^20\.19\.5'
+      register: node_candidate
+      changed_when: false
+
+    - name: Fail if exact nodejs=20.19.5 not found
+      fail:
+        msg: >
+          Cannot find nodejs deb version for 20.19.5 in NodeSource repo.
+          Check 'apt-cache policy nodejs' on target host and network access.
+      when: (node_candidate.stdout | default('')) | length == 0
+
+    - name: Install nodejs=20.19.5 (exact)
+      apt:
+        name: "nodejs={{ node_candidate.stdout }}"
+        state: present
+      register: node_install
+      retries: 6          # повторим 6 раз
+      delay: 10           # с паузой 10 секунд
+      until: node_install is succeeded
+
+    - name: Hold nodejs to prevent upgrades
+      command: apt-mark hold nodejs
+      changed_when: false
+
+    - name: Show Node/NPM versions
+      shell: node -v && npm -v
+      register: node_versions
+      changed_when: false
+
+    - debug:
+        var: node_versions.stdout
+
+    # --- CHP после Node.js, pinned ---
+    - name: Install configurable-http-proxy (pinned 4.5.1)
+      shell: npm install -g configurable-http-proxy@4.5.1
+      args:
+        creates: /usr/local/lib/node_modules/configurable-http-proxy
+
+    # --- Директории и venv ---
+    - name: Create root dir
+      file:
+        path: "{{ root_dir }}"
+        state: directory
+        owner: "{{ service_user if service_user|length > 0 else 'root' }}"
+        group: "{{ service_user if service_user|length > 0 else 'root' }}"
+        mode: '0755'
+
+    - name: Create data dir
+      file:
+        path: "{{ data_dir }}"
+        state: directory
+        owner: "{{ service_user if service_user|length > 0 else 'root' }}"
+        group: "{{ service_user if service_user|length > 0 else 'root' }}"
+        mode: '0755'
+
+    - name: Create venv
+      command: python3 -m venv "{{ venv_dir }}"
+      args:
+        creates: "{{ venv_dir }}/bin/activate"
+
+    - name: Upgrade pip & wheel (idempotent)
+      command: "{{ venv_dir }}/bin/pip install --upgrade pip wheel"
+      args:
+        creates: "{{ venv_dir }}/bin/wheel"
+
+    - name: Install JupyterHub + JupyterLab
+      shell: "{{ venv_dir }}/bin/pip install jupyterhub==5.4.2 jupyterlab"
+      args:
+        creates: "{{ venv_dir }}/bin/jupyterhub"
+
+    - name: Install ipywidgets
+      pip:
+        name: ipywidgets
+        virtualenv: "{{ venv_dir }}"
+        state: present
+
+    - name: Build JupyterLab extensions (for ipywidgets support)
+      command: "{{ venv_dir }}/bin/jupyter lab build"
+      register: jupyter_build
+      changed_when: "'Build succeeded' in jupyter_build.stdout or 'already up to date' in jupyter_build.stdout"
+
+    # --- Шаблоны и systemd ---
+    - name: Render jupyterhub_config.py
+      template:
+        src: jupyterhub_config.py.j2
+        dest: "{{ root_dir }}/jupyterhub_config.py"
+        owner: "{{ service_user if service_user|length > 0 else 'root' }}"
+        group: "{{ service_user if service_user|length > 0 else 'root' }}"
+        mode: '0644'
+
+    - name: Render systemd unit
+      template:
+        src: jupyterhub.service.j2
+        dest: "/etc/systemd/system/{{ systemd_unit }}.service"
+        mode: '0644'
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start JupyterHub service
+      systemd:
+        name: "{{ systemd_unit }}"
+        enabled: yes
+        state: started
+
+    - name: Install and start ADCM status checker
+      include_role:
+        name: status_checker
+        tasks_from: install.yml
+      vars:
+        checker_type: services
+        service_name: "{{ services.jupyterhub.config.systemd_unit }}"
+        adcm_connection_string: "{{ adcm.config.global.adcm_url }}"
+        component_id: "{{ services.jupyterhub.HUB.component_id }}"
+        host_id: "{{ adcm_hostid }}"
+        token: "{{ env.status_api_token }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample Python notebook to admin home directory
+      template:
+        src: sample_python.ipynb.j2
+        dest: "{{ admin_home }}/sample_python.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+    

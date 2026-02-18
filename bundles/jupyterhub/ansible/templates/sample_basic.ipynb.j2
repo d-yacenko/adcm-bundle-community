@@ -1,0 +1,331 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "intro",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на BASIC"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example1-title",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "example1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from BASIC!\n",
+      "Welcome to BASIC kernel in Jupyter.\n"
+     ]
+    }
+   ],
+   "source": [
+    "PRINT \"Hello from BASIC!\"\n",
+    "PRINT \"Welcome to BASIC kernel in Jupyter.\"\n",
+    "END"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example2-title",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "example2",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a =  15 \n",
+      "b =  27 \n",
+      "Sum:  42 \n",
+      "Product:  405 \n"
+     ]
+    }
+   ],
+   "source": [
+    "DIM a AS INTEGER\n",
+    "DIM b AS INTEGER\n",
+    "DIM sum AS INTEGER\n",
+    "DIM product AS INTEGER\n",
+    "\n",
+    "a = 15\n",
+    "b = 27\n",
+    "sum = a + b\n",
+    "product = a * b\n",
+    "\n",
+    "PRINT \"a = \"; a\n",
+    "PRINT \"b = \"; b\n",
+    "PRINT \"Sum: \"; sum\n",
+    "PRINT \"Product: \"; product\n",
+    "END"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example3-title",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа с массивами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "example3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Filling array with values:\n",
+      "numbers( 1 ) =  10 \n",
+      "numbers( 2 ) =  20 \n",
+      "numbers( 3 ) =  30 \n",
+      "numbers( 4 ) =  40 \n",
+      "numbers( 5 ) =  50 \n",
+      "\n",
+      "Array sum:\n",
+      "Total:  150 \n"
+     ]
+    }
+   ],
+   "source": [
+    "DIM numbers(1 TO 5) AS INTEGER\n",
+    "DIM i AS INTEGER\n",
+    "DIM sum AS INTEGER\n",
+    "\n",
+    "PRINT \"Filling array with values:\"\n",
+    "FOR i = 1 TO 5\n",
+    "    numbers(i) = i * 10\n",
+    "    PRINT \"numbers(\"; i; \") = \"; numbers(i)\n",
+    "NEXT i\n",
+    "\n",
+    "PRINT\n",
+    "PRINT \"Array sum:\"\n",
+    "sum = 0\n",
+    "FOR i = 1 TO 5\n",
+    "    sum = sum + numbers(i)\n",
+    "NEXT i\n",
+    "PRINT \"Total: \"; sum\n",
+    "END"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example4-title",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Простые функции"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "id": "example4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of  5  is  120 \n"
+     ]
+    }
+   ],
+   "source": [
+    "FUNCTION factorial(n AS INTEGER) AS INTEGER\n",
+    "    IF n <= 1 THEN\n",
+    "        factorial = 1\n",
+    "    ELSE\n",
+    "        factorial = n * factorial(n - 1)\n",
+    "    END IF\n",
+    "END FUNCTION\n",
+    "\n",
+    "DIM num AS INTEGER\n",
+    "DIM result AS INTEGER\n",
+    "\n",
+    "num = 5\n",
+    "result = factorial(num)\n",
+    "PRINT \"Factorial of \"; num; \" is \"; result\n",
+    "END"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example5-title",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "id": "example5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello, BASIC!\n",
+      "Length of greeting:  13 \n"
+     ]
+    }
+   ],
+   "source": [
+    "DIM uname AS STRING\n",
+    "DIM greeting AS STRING\n",
+    "\n",
+    "uname = \"BASIC\"\n",
+    "greeting = \"Hello, \" + uname + \"!\"\n",
+    "PRINT greeting\n",
+    "PRINT \"Length of greeting: \"; LEN(greeting)\n",
+    "END"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example6-title",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Простой калькулятор"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "id": "example6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Calculator Example:\n",
+      "x =  25.5\n",
+      "y =  4.2\n",
+      "\n",
+      "x + y =  29.7\n",
+      "x - y =  21.3\n",
+      "x * y =  107.1\n",
+      "x / y =  6.071429\n"
+     ]
+    }
+   ],
+   "source": [
+    "DIM x AS SINGLE\n",
+    "DIM y AS SINGLE\n",
+    "DIM result AS SINGLE\n",
+    "\n",
+    "x = 25.5\n",
+    "y = 4.2\n",
+    "\n",
+    "PRINT \"Calculator Example:\"\n",
+    "PRINT \"x = \"; x\n",
+    "PRINT \"y = \"; y\n",
+    "PRINT\n",
+    "\n",
+    "result = x + y\n",
+    "PRINT \"x + y = \"; result\n",
+    "\n",
+    "result = x - y\n",
+    "PRINT \"x - y = \"; result\n",
+    "\n",
+    "result = x * y\n",
+    "PRINT \"x * y = \"; result\n",
+    "\n",
+    "result = x / y\n",
+    "PRINT \"x / y = \"; result\n",
+    "END"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example7-title",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Простая игра (угадай число)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "example7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Guessing game:\n",
+      "Your guess:  35 \n",
+      "Too low! Try a higher number.\n"
+     ]
+    }
+   ],
+   "source": [
+    "DIM secret AS INTEGER\n",
+    "DIM guess AS INTEGER\n",
+    "\n",
+    "secret = 42\n",
+    "guess = 35\n",
+    "\n",
+    "PRINT \"Guessing game:\"\n",
+    "PRINT \"Your guess: \"; guess\n",
+    "\n",
+    "IF guess = secret THEN\n",
+    "    PRINT \"Congratulations! You guessed it!\"\n",
+    "ELSEIF guess < secret THEN\n",
+    "    PRINT \"Too low! Try a higher number.\"\n",
+    "ELSE\n",
+    "    PRINT \"Too high! Try a lower number.\"\n",
+    "END IF\n",
+    "END"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "5f11f072-f9df-4acd-974b-6f574883f794",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "BASIC (FreeBASIC)",
+   "language": "basic",
+   "name": "basic"
+  },
+  "language_info": {
+   "file_extension": ".bas",
+   "mimetype": "text/x-basic",
+   "name": "basic"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

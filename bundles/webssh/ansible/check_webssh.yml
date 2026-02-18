@@ -1,0 +1,18 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    webssh_service: "{{ services.webssh.config.systemd_unit }}"
+  tasks:
+    - name: Check WebSSH service status
+      systemd:
+        name: "{{ webssh_service }}"
+        enabled: yes
+      register: svc
+
+    - name: Report WebSSH status to ADCM logs
+      debug:
+        msg: "webssh {{ 'running' if svc.status.ActiveState == 'active' else 'stopped' }}"
+
+

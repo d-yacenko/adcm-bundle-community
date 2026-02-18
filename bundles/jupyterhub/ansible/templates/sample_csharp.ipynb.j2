@@ -1,0 +1,738 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "intro",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на C#"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example1-title",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "example1",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "\r\n",
+       "<div>\r\n",
+       "    <div id='dotnet-interactive-this-cell-45189.Microsoft.DotNet.Interactive.Http.HttpPort' style='display: none'>\r\n",
+       "        The below script needs to be able to find the current output cell; this is an easy method to get it.\r\n",
+       "    </div>\r\n",
+       "    <script type='text/javascript'>\r\n",
+       "async function probeAddresses(probingAddresses) {\r\n",
+       "    function timeout(ms, promise) {\r\n",
+       "        return new Promise(function (resolve, reject) {\r\n",
+       "            setTimeout(function () {\r\n",
+       "                reject(new Error('timeout'))\r\n",
+       "            }, ms)\r\n",
+       "            promise.then(resolve, reject)\r\n",
+       "        })\r\n",
+       "    }\r\n",
+       "\r\n",
+       "    if (Array.isArray(probingAddresses)) {\r\n",
+       "        for (let i = 0; i < probingAddresses.length; i++) {\r\n",
+       "\r\n",
+       "            let rootUrl = probingAddresses[i];\r\n",
+       "\r\n",
+       "            if (!rootUrl.endsWith('/')) {\r\n",
+       "                rootUrl = `${rootUrl}/`;\r\n",
+       "            }\r\n",
+       "\r\n",
+       "            try {\r\n",
+       "                let response = await timeout(1000, fetch(`${rootUrl}discovery`, {\r\n",
+       "                    method: 'POST',\r\n",
+       "                    cache: 'no-cache',\r\n",
+       "                    mode: 'cors',\r\n",
+       "                    timeout: 1000,\r\n",
+       "                    headers: {\r\n",
+       "                        'Content-Type': 'text/plain'\r\n",
+       "                    },\r\n",
+       "                    body: probingAddresses[i]\r\n",
+       "                }));\r\n",
+       "\r\n",
+       "                if (response.status == 200) {\r\n",
+       "                    return rootUrl;\r\n",
+       "                }\r\n",
+       "            }\r\n",
+       "            catch (e) { }\r\n",
+       "        }\r\n",
+       "    }\r\n",
+       "}\r\n",
+       "\r\n",
+       "function loadDotnetInteractiveApi() {\r\n",
+       "    probeAddresses([\"http://10.129.0.27:2048/\", \"http://127.0.0.1:2048/\"])\r\n",
+       "        .then((root) => {\r\n",
+       "        // use probing to find host url and api resources\r\n",
+       "        // load interactive helpers and language services\r\n",
+       "        let dotnetInteractiveRequire = require.config({\r\n",
+       "        context: '45189.Microsoft.DotNet.Interactive.Http.HttpPort',\r\n",
+       "                paths:\r\n",
+       "            {\r\n",
+       "                'dotnet-interactive': `${root}resources`\r\n",
+       "                }\r\n",
+       "        }) || require;\r\n",
+       "\r\n",
+       "            window.dotnetInteractiveRequire = dotnetInteractiveRequire;\r\n",
+       "\r\n",
+       "            window.configureRequireFromExtension = function(extensionName, extensionCacheBuster) {\r\n",
+       "                let paths = {};\r\n",
+       "                paths[extensionName] = `${root}extensions/${extensionName}/resources/`;\r\n",
+       "                \r\n",
+       "                let internalRequire = require.config({\r\n",
+       "                    context: extensionCacheBuster,\r\n",
+       "                    paths: paths,\r\n",
+       "                    urlArgs: `cacheBuster=${extensionCacheBuster}`\r\n",
+       "                    }) || require;\r\n",
+       "\r\n",
+       "                return internalRequire\r\n",
+       "            };\r\n",
+       "        \r\n",
+       "            dotnetInteractiveRequire([\r\n",
+       "                    'dotnet-interactive/dotnet-interactive'\r\n",
+       "                ],\r\n",
+       "                function (dotnet) {\r\n",
+       "                    dotnet.init(window);\r\n",
+       "                },\r\n",
+       "                function (error) {\r\n",
+       "                    console.log(error);\r\n",
+       "                }\r\n",
+       "            );\r\n",
+       "        })\r\n",
+       "        .catch(error => {console.log(error);});\r\n",
+       "    }\r\n",
+       "\r\n",
+       "// ensure `require` is available globally\r\n",
+       "if ((typeof(require) !==  typeof(Function)) || (typeof(require.config) !== typeof(Function))) {\r\n",
+       "    let require_script = document.createElement('script');\r\n",
+       "    require_script.setAttribute('src', 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js');\r\n",
+       "    require_script.setAttribute('type', 'text/javascript');\r\n",
+       "    \r\n",
+       "    \r\n",
+       "    require_script.onload = function() {\r\n",
+       "        loadDotnetInteractiveApi();\r\n",
+       "    };\r\n",
+       "\r\n",
+       "    document.getElementsByTagName('head')[0].appendChild(require_script);\r\n",
+       "}\r\n",
+       "else {\r\n",
+       "    loadDotnetInteractiveApi();\r\n",
+       "}\r\n",
+       "\r\n",
+       "    </script>\r\n",
+       "</div>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from C#!\n",
+      "Welcome to C# kernel in Jupyter.\n",
+      "C# version: 8.0.22\n"
+     ]
+    }
+   ],
+   "source": [
+    "Console.WriteLine(\"Hello from C#!\");\n",
+    "Console.WriteLine(\"Welcome to C# kernel in Jupyter.\");\n",
+    "Console.WriteLine($\"C# version: {Environment.Version}\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example2-title",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "example2",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum: 42\n",
+      "Product: 405\n",
+      "Division: 0.5556\n",
+      "Power: 225\n",
+      "Square root of 15: 3.8730\n"
+     ]
+    }
+   ],
+   "source": [
+    "int a = 15;\n",
+    "int b = 27;\n",
+    "int sum = a + b;\n",
+    "int product = a * b;\n",
+    "\n",
+    "Console.WriteLine($\"a = {a}\");\n",
+    "Console.WriteLine($\"b = {b}\");\n",
+    "Console.WriteLine($\"Sum: {sum}\");\n",
+    "Console.WriteLine($\"Product: {product}\");\n",
+    "Console.WriteLine($\"Division: {(double)a / b:F4}\");\n",
+    "Console.WriteLine($\"Power: {Math.Pow(a, 2)}\");\n",
+    "Console.WriteLine($\"Square root of {a}: {Math.Sqrt(a):F4}\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example3-title",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа с массивами и списками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "example3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "numbers[0] = 10\n",
+      "numbers[1] = 20\n",
+      "numbers[2] = 30\n",
+      "numbers[3] = 40\n",
+      "numbers[4] = 50\n",
+      "\n",
+      "Sum: 150\n",
+      "Max: 50\n",
+      "Min: 10\n",
+      "Average: 30.00\n",
+      "\n",
+      "List count: 6\n"
+     ]
+    }
+   ],
+   "source": [
+    "int[] numbers = new int[5];\n",
+    "for (int i = 0; i < 5; i++)\n",
+    "{\n",
+    "    numbers[i] = (i + 1) * 10;\n",
+    "    Console.WriteLine($\"numbers[{i}] = {numbers[i]}\");\n",
+    "}\n",
+    "\n",
+    "Console.WriteLine($\"\\nSum: {numbers.Sum()}\");\n",
+    "Console.WriteLine($\"Max: {numbers.Max()}\");\n",
+    "Console.WriteLine($\"Min: {numbers.Min()}\");\n",
+    "Console.WriteLine($\"Average: {numbers.Average():F2}\");\n",
+    "\n",
+    "// Использование List\n",
+    "List<int> numberList = new List<int> { 10, 20, 30, 40, 50 };\n",
+    "numberList.Add(60);\n",
+    "Console.WriteLine($\"\\nList count: {numberList.Count}\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example4-title",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Функции и методы"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "example4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of 5 is 120\n",
+      "\n",
+      "First 10 Fibonacci numbers:\n",
+      "0 1 1 2 3 5 8 13 21 34 \n"
+     ]
+    }
+   ],
+   "source": [
+    "// Функция для вычисления факториала\n",
+    "long Factorial(int n)\n",
+    "{\n",
+    "    if (n <= 1)\n",
+    "        return 1;\n",
+    "    return n * Factorial(n - 1);\n",
+    "}\n",
+    "\n",
+    "// Функция для вычисления чисел Фибоначчи\n",
+    "int Fibonacci(int n)\n",
+    "{\n",
+    "    if (n <= 1)\n",
+    "        return n;\n",
+    "    return Fibonacci(n - 1) + Fibonacci(n - 2);\n",
+    "}\n",
+    "\n",
+    "int num = 5;\n",
+    "Console.WriteLine($\"Factorial of {num} is {Factorial(num)}\");\n",
+    "\n",
+    "Console.WriteLine(\"\\nFirst 10 Fibonacci numbers:\");\n",
+    "for (int i = 0; i < 10; i++)\n",
+    "{\n",
+    "    Console.Write($\"{Fibonacci(i)} \");\n",
+    "}\n",
+    "Console.WriteLine();"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example5-title",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "example5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original string: C# Programming\n",
+      "Length: 14\n",
+      "Uppercase: C# PROGRAMMING\n",
+      "Lowercase: c# programming\n",
+      "Greeting: Hello, C# Programming!\n",
+      "Words: C#, Programming\n",
+      "String contains 'C#'\n"
+     ]
+    }
+   ],
+   "source": [
+    "string name = \"C# Programming\";\n",
+    "Console.WriteLine($\"Original string: {name}\");\n",
+    "Console.WriteLine($\"Length: {name.Length}\");\n",
+    "Console.WriteLine($\"Uppercase: {name.ToUpper()}\");\n",
+    "Console.WriteLine($\"Lowercase: {name.ToLower()}\");\n",
+    "\n",
+    "string greeting = $\"Hello, {name}!\";\n",
+    "Console.WriteLine($\"Greeting: {greeting}\");\n",
+    "\n",
+    "// Разделение строки\n",
+    "string[] words = name.Split(' ');\n",
+    "Console.WriteLine($\"Words: {string.Join(\", \", words)}\");\n",
+    "\n",
+    "// Проверка содержимого\n",
+    "if (name.Contains(\"C#\"))\n",
+    "{\n",
+    "    Console.WriteLine(\"String contains 'C#'\");\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example6-title",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Классы и объектно-ориентированное программирование"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "example6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "Name: Alice\n",
+      "Age: 30\n",
+      "City: Moscow\n"
+     ]
+    }
+   ],
+   "source": [
+    "public class Person\n",
+    "{\n",
+    "    public string Name { get; set; }\n",
+    "    public int Age { get; set; }\n",
+    "    public string City { get; set; }\n",
+    "    \n",
+    "    public Person(string name, int age, string city)\n",
+    "    {\n",
+    "        Name = name;\n",
+    "        Age = age;\n",
+    "        City = city;\n",
+    "    }\n",
+    "    \n",
+    "    public void DisplayInfo()\n",
+    "    {\n",
+    "        Console.WriteLine($\"Name: {Name}\");\n",
+    "        Console.WriteLine($\"Age: {Age}\");\n",
+    "        Console.WriteLine($\"City: {City}\");\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "var person = new Person(\"Alice\", 30, \"Moscow\");\n",
+    "Console.WriteLine(\"Person information:\");\n",
+    "person.DisplayInfo();"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example7-title",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Словари и коллекции"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "example7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "  name: Alice\n",
+      "  age: 30\n",
+      "  city: Moscow\n",
+      "  languages: System.Collections.Generic.List`1[System.String]\n",
+      "\n",
+      "Number of languages: 3\n"
+     ]
+    }
+   ],
+   "source": [
+    "Dictionary<string, object> person = new Dictionary<string, object>\n",
+    "{\n",
+    "    { \"name\", \"Alice\" },\n",
+    "    { \"age\", 30 },\n",
+    "    { \"city\", \"Moscow\" },\n",
+    "    { \"languages\", new List<string> { \"C#\", \"Python\", \"JavaScript\" } }\n",
+    "};\n",
+    "\n",
+    "Console.WriteLine(\"Person information:\");\n",
+    "foreach (var kvp in person)\n",
+    "{\n",
+    "    Console.WriteLine($\"  {kvp.Key}: {kvp.Value}\");\n",
+    "}\n",
+    "\n",
+    "var languages = person[\"languages\"] as List<string>;\n",
+    "Console.WriteLine($\"\\nNumber of languages: {languages?.Count ?? 0}\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example8-title",
+   "metadata": {},
+   "source": [
+    "## Пример 8: LINQ запросы"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "example8",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Squares: 1, 4, 9, 16, 25, 36, 49, 64, 81, 100\n",
+      "Even numbers: 2, 4, 6, 8, 10\n",
+      "\n",
+      "Square dictionary:\n",
+      "  1 => 1\n",
+      "  2 => 4\n",
+      "  3 => 9\n",
+      "  4 => 16\n",
+      "  5 => 25\n"
+     ]
+    }
+   ],
+   "source": [
+    "using System.Linq;\n",
+    "\n",
+    "int[] numbers = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };\n",
+    "\n",
+    "// Генератор списка для квадратов\n",
+    "var squares = numbers.Select(x => x * x).ToArray();\n",
+    "Console.WriteLine(\"Squares: \" + string.Join(\", \", squares));\n",
+    "\n",
+    "// Фильтрация (только четные)\n",
+    "var evenNumbers = numbers.Where(x => x % 2 == 0).ToArray();\n",
+    "Console.WriteLine(\"Even numbers: \" + string.Join(\", \", evenNumbers));\n",
+    "\n",
+    "// Генератор словаря\n",
+    "var squareDict = numbers.Take(5).ToDictionary(x => x, x => x * x);\n",
+    "Console.WriteLine(\"\\nSquare dictionary:\");\n",
+    "foreach (var kvp in squareDict)\n",
+    "{\n",
+    "    Console.WriteLine($\"  {kvp.Key} => {kvp.Value}\");\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example9-title",
+   "metadata": {},
+   "source": [
+    "## Пример 9: Работа с датами и временем"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "example9",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Current date and time: 11/22/2025 22:01:29\n",
+      "Formatted: 2025-11-22 22:01:29\n",
+      "In 7 days and 3 hours: 2025-11-30 01:01:29\n",
+      "Days since 2020-01-01: 2152\n",
+      "Today's date: 11/22/2025\n"
+     ]
+    }
+   ],
+   "source": [
+    "DateTime now = DateTime.Now;\n",
+    "Console.WriteLine($\"Current date and time: {now}\");\n",
+    "Console.WriteLine($\"Formatted: {now:yyyy-MM-dd HH:mm:ss}\");\n",
+    "\n",
+    "// Добавление времени\n",
+    "DateTime future = now.AddDays(7).AddHours(3);\n",
+    "Console.WriteLine($\"In 7 days and 3 hours: {future:yyyy-MM-dd HH:mm:ss}\");\n",
+    "\n",
+    "// Разница во времени\n",
+    "DateTime past = new DateTime(2020, 1, 1);\n",
+    "TimeSpan difference = now - past;\n",
+    "Console.WriteLine($\"Days since 2020-01-01: {difference.Days}\");\n",
+    "\n",
+    "// Только дата\n",
+    "DateOnly today = DateOnly.FromDateTime(DateTime.Now);\n",
+    "Console.WriteLine($\"Today's date: {today}\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example10-title",
+   "metadata": {},
+   "source": [
+    "## Пример 10: Асинхронное программирование"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "example10",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from async method!\n",
+      "Parallel results: 10, 20, 30\n"
+     ]
+    }
+   ],
+   "source": [
+    "using System.Threading.Tasks;\n",
+    "\n",
+    "async Task<string> GetMessageAsync()\n",
+    "{\n",
+    "    await Task.Delay(100); // Имитация асинхронной операции\n",
+    "    return \"Hello from async method!\";\n",
+    "}\n",
+    "\n",
+    "var message = await GetMessageAsync();\n",
+    "Console.WriteLine(message);\n",
+    "\n",
+    "// Параллельное выполнение\n",
+    "var tasks = new List<Task<int>>\n",
+    "{\n",
+    "    Task.Run(() => { Task.Delay(100).Wait(); return 10; }),\n",
+    "    Task.Run(() => { Task.Delay(100).Wait(); return 20; }),\n",
+    "    Task.Run(() => { Task.Delay(100).Wait(); return 30; })\n",
+    "};\n",
+    "\n",
+    "var results = await Task.WhenAll(tasks);\n",
+    "Console.WriteLine($\"Parallel results: {string.Join(\", \", results)}\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example11-title",
+   "metadata": {},
+   "source": [
+    "## Пример 11: Обработка исключений"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "example11",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "(22,18): error CS0020: Division by constant zero\n",
+      "\n"
+     ]
+    },
+    {
+     "ename": "Error",
+     "evalue": "compilation error",
+     "output_type": "error",
+     "traceback": []
+    }
+   ],
+   "source": [
+    "try\n",
+    "{\n",
+    "    int[] numbers = { 1, 2, 3 };\n",
+    "    Console.WriteLine($\"Number at index 5: {numbers[5]}\"); // IndexOutOfRangeException\n",
+    "}\n",
+    "catch (IndexOutOfRangeException ex)\n",
+    "{\n",
+    "    Console.WriteLine($\"Index out of range: {ex.Message}\");\n",
+    "}\n",
+    "catch (Exception ex)\n",
+    "{\n",
+    "    Console.WriteLine($\"General error: {ex.Message}\");\n",
+    "}\n",
+    "finally\n",
+    "{\n",
+    "    Console.WriteLine(\"Finally block executed.\");\n",
+    "}\n",
+    "\n",
+    "// Деление на ноль\n",
+    "try\n",
+    "{\n",
+    "    int result = 10 / 0;\n",
+    "}\n",
+    "catch (DivideByZeroException ex)\n",
+    "{\n",
+    "    Console.WriteLine($\"Division by zero: {ex.Message}\");\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example12-title",
+   "metadata": {},
+   "source": [
+    "## Пример 12: Работа с файлами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "example12",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "File content:\n",
+      "Hello from C#!\n",
+      "This is a test file.\n",
+      "File I/O example.\n",
+      "\n",
+      "File size: 54 bytes\n",
+      "File deleted.\n"
+     ]
+    }
+   ],
+   "source": [
+    "using System.IO;\n",
+    "\n",
+    "string filename = Path.Combine(Path.GetTempPath(), \"test_csharp_file.txt\");\n",
+    "\n",
+    "// Запись в файл\n",
+    "File.WriteAllLines(filename, new[]\n",
+    "{\n",
+    "    \"Hello from C#!\",\n",
+    "    \"This is a test file.\",\n",
+    "    \"File I/O example.\"\n",
+    "});\n",
+    "\n",
+    "// Чтение из файла\n",
+    "string[] lines = File.ReadAllLines(filename);\n",
+    "Console.WriteLine(\"File content:\");\n",
+    "foreach (string line in lines)\n",
+    "{\n",
+    "    Console.WriteLine(line);\n",
+    "}\n",
+    "\n",
+    "FileInfo fileInfo = new FileInfo(filename);\n",
+    "Console.WriteLine($\"\\nFile size: {fileInfo.Length} bytes\");\n",
+    "\n",
+    "// Удаление файла\n",
+    "File.Delete(filename);\n",
+    "Console.WriteLine(\"File deleted.\");"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6bc15c9b-97bf-451e-ad62-d3be06a552a3",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "C# (.NET Interactive)",
+   "language": "C#",
+   "name": "csharp-interactive"
+  },
+  "language_info": {
+   "file_extension": ".cs",
+   "mimetype": "text/x-csharp",
+   "name": "C#",
+   "pygments_lexer": "csharp",
+   "version": "12.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

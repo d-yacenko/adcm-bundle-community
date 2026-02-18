@@ -1,0 +1,173 @@
+# ansible/install_scala_kernel.yml
+---
+- name: Install Scala (Almond) kernel into the JupyterHub venv
+  hosts: all
+  gather_facts: true
+  become: true
+  environment:
+    LANG: C.UTF-8
+    LC_ALL: C.UTF-8
+    PYTHONIOENCODING: utf-8
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure host uses Debian-family package manager
+      ansible.builtin.fail:
+        msg: "install_scala_kernel job supports only Debian/Ubuntu (APT)."
+      when: ansible_os_family | lower not in ['debian']
+
+    - name: Determine hub venv directory
+      set_fact:
+        hub_venv_dir: >-
+          {{
+            (
+              (job.config.hub_venv | default('', true) | trim)
+              or (
+                service is defined
+                and service.config is defined
+                and service.config.venv_dir is defined
+                and service.config.venv_dir
+              )
+              or ((services | default({})).get('jupyterhub', {}).get('config', {}).get('venv_dir',''))
+              or '/opt/jupyterhub/venv'
+            ) | string
+          }}
+
+    - name: Set hub paths and installation defaults
+      set_fact:
+        hub_bin_dir: "{{ hub_venv_dir.rstrip('/') }}/bin"
+        hub_python: "{{ hub_venv_dir.rstrip('/') }}/bin/python3"
+        hub_jupyter: "{{ hub_venv_dir.rstrip('/') }}/bin/jupyter"
+        hub_kernels_dir: "{{ hub_venv_dir.rstrip('/') }}/share/jupyter/kernels"
+        coursier_bin_path: >-
+          {{
+            (job.config.coursier_bin | default('/usr/local/bin/cs', true) | trim)
+            or '/usr/local/bin/cs'
+          }}
+        coursier_url: >-
+          {{
+            (job.config.coursier_url | default('https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux', true) | trim)
+            or 'https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux'
+          }}
+        coursier_cache_dir: >-
+          {{
+            (job.config.coursier_cache_dir | default('/opt/jupyterhub/coursier-cache', true) | trim)
+            or '/opt/jupyterhub/coursier-cache'
+          }}
+        scala_kernel_id: >-
+          {{
+            (job.config.kernel_id | default('scala-almond', true) | trim)
+            or 'scala-almond'
+          }}
+        scala_kernel_display_name: >-
+          {{
+            (job.config.kernel_display_name | default('Scala (Almond)', true) | trim)
+            or 'Scala (Almond)'
+          }}
+        jdk_package: >-
+          {{
+            (job.config.jdk_package | default('openjdk-11-jdk', true) | trim)
+            or 'openjdk-11-jdk'
+          }}
+        scala_extra_packages:
+          - curl
+          - zip
+          - unzip
+
+    - name: Build kernel-specific paths
+      set_fact:
+        scala_kernel_dir: "{{ hub_kernels_dir.rstrip('/') }}/{{ scala_kernel_id }}"
+        scala_launcher_path: "{{ hub_kernels_dir.rstrip('/') }}/{{ scala_kernel_id }}/launcher.jar"
+
+    - name: Ensure hub jupyter executable exists
+      ansible.builtin.stat:
+        path: "{{ hub_jupyter }}"
+      register: hub_jupyter_stat
+
+    - name: Fail if hub Jupyter binary missing
+      ansible.builtin.fail:
+        msg: "Binary {{ hub_jupyter }} not found. Ensure JupyterHub venv exists."
+      when: not hub_jupyter_stat.stat.exists
+
+    - name: Install required apt packages
+      ansible.builtin.apt:
+        name: "{{ [jdk_package] + scala_extra_packages }}"
+        state: present
+        update_cache: true
+
+    - name: Download coursier launcher
+      ansible.builtin.get_url:
+        url: "{{ coursier_url }}"
+        dest: "{{ coursier_bin_path }}"
+        mode: "0755"
+
+    - name: Ensure coursier cache directory exists
+      ansible.builtin.file:
+        path: "{{ coursier_cache_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0775"
+
+    - name: Ensure kernels directory exists
+      ansible.builtin.file:
+        path: "{{ hub_kernels_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Show coursier version
+      command: "{{ coursier_bin_path }} --version"
+      register: coursier_version_out
+      changed_when: false
+
+    - name: Install Scala kernel via coursier
+      command: >-
+        {{ coursier_bin_path }} launch almond --
+        --install
+        --force
+        --display-name "{{ scala_kernel_display_name }}"
+        --id {{ scala_kernel_id }}
+        --jupyter-path {{ hub_kernels_dir }}
+        --copy-launcher
+      environment:
+        COURSIER_CACHE: "{{ coursier_cache_dir }}"
+        PATH: "{{ hub_bin_dir }}:/usr/local/bin:/usr/bin:/bin"
+
+    - name: Ensure launcher jar is world-readable
+      ansible.builtin.file:
+        path: "{{ scala_launcher_path }}"
+        mode: "0755"
+      when: scala_launcher_path is defined
+
+    - name: Show resulting kernel directory
+      debug:
+        msg:
+          kernel_dir: "{{ scala_kernel_dir }}"
+          display_name: "{{ scala_kernel_display_name }}"
+          coursier_cache_dir: "{{ coursier_cache_dir }}"
+          coursier_version: "{{ coursier_version_out.stdout | default('') }}"
+
+    - name: Determine admin user home directory
+      set_fact:
+        admin_home: "/home/admin"
+
+    - name: Ensure admin home directory exists
+      file:
+        path: "{{ admin_home }}"
+        state: directory
+        mode: "0755"
+        owner: admin
+        group: user
+
+    - name: Copy sample notebook to admin home directory
+      template:
+        src: sample_scala.ipynb.j2
+        dest: "{{ admin_home }}/sample_scala.ipynb"
+        mode: "0644"
+        owner: admin
+        group: user
+

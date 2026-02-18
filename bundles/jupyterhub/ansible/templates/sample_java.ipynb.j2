@@ -1,0 +1,730 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "intro",
+   "metadata": {},
+   "source": [
+    "# Примеры кода на Java"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example1-title",
+   "metadata": {},
+   "source": [
+    "## Пример 1: Приветствие"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "example1",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello from Java!\n",
+      "Welcome to Java kernel in Jupyter.\n",
+      "Java version: 17.0.16\n"
+     ]
+    }
+   ],
+   "source": [
+    "System.out.println(\"Hello from Java!\");\n",
+    "System.out.println(\"Welcome to Java kernel in Jupyter.\");\n",
+    "System.out.println(\"Java version: \" + System.getProperty(\"java.version\"));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example2-title",
+   "metadata": {},
+   "source": [
+    "## Пример 2: Математические вычисления"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "example2",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "a = 15\n",
+      "b = 27\n",
+      "Sum: 42\n",
+      "Product: 405\n",
+      "Division: 0.5555555555555556\n",
+      "Power: 225.0\n",
+      "Square root of 15: 3.872983346207417\n"
+     ]
+    }
+   ],
+   "source": [
+    "int a = 15;\n",
+    "int b = 27;\n",
+    "int sum = a + b;\n",
+    "int product = a * b;\n",
+    "\n",
+    "System.out.println(\"a = \" + a);\n",
+    "System.out.println(\"b = \" + b);\n",
+    "System.out.println(\"Sum: \" + sum);\n",
+    "System.out.println(\"Product: \" + product);\n",
+    "System.out.println(\"Division: \" + ((double)a / b));\n",
+    "System.out.println(\"Power: \" + Math.pow(a, 2));\n",
+    "System.out.println(\"Square root of \" + a + \": \" + Math.sqrt(a));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example3-title",
+   "metadata": {},
+   "source": [
+    "## Пример 3: Работа с массивами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "example3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "numbers[0] = 10\n",
+      "numbers[1] = 20\n",
+      "numbers[2] = 30\n",
+      "numbers[3] = 40\n",
+      "numbers[4] = 50\n",
+      "\n",
+      "Sum: 150\n",
+      "Max: 50\n",
+      "Min: 10\n",
+      "Average: 30.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "int[] numbers = new int[5];\n",
+    "for (int i = 0; i < 5; i++) {\n",
+    "    numbers[i] = (i + 1) * 10;\n",
+    "    System.out.println(\"numbers[\" + i + \"] = \" + numbers[i]);\n",
+    "}\n",
+    "\n",
+    "int sum = 0;\n",
+    "int max = numbers[0];\n",
+    "int min = numbers[0];\n",
+    "for (int num : numbers) {\n",
+    "    sum += num;\n",
+    "    if (num > max) max = num;\n",
+    "    if (num < min) min = num;\n",
+    "}\n",
+    "\n",
+    "System.out.println(\"\\nSum: \" + sum);\n",
+    "System.out.println(\"Max: \" + max);\n",
+    "System.out.println(\"Min: \" + min);\n",
+    "System.out.println(\"Average: \" + ((double)sum / numbers.length));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example4-title",
+   "metadata": {},
+   "source": [
+    "## Пример 4: Коллекции (ArrayList, List)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "example4",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "List: [10, 20, 30, 40, 50]\n",
+      "Size: 5\n",
+      "\n",
+      "Squares:\n",
+      "100\n",
+      "400\n",
+      "900\n",
+      "1600\n",
+      "2500\n",
+      "\n",
+      "Even numbers: [10, 20, 30, 40, 50]\n"
+     ]
+    }
+   ],
+   "source": [
+    "import java.util.*;\n",
+    "\n",
+    "List<Integer> list = new ArrayList<>();\n",
+    "list.add(10);\n",
+    "list.add(20);\n",
+    "list.add(30);\n",
+    "list.add(40);\n",
+    "list.add(50);\n",
+    "\n",
+    "System.out.println(\"List: \" + list);\n",
+    "System.out.println(\"Size: \" + list.size());\n",
+    "\n",
+    "// Stream API\n",
+    "System.out.println(\"\\nSquares:\");\n",
+    "list.stream()\n",
+    "    .map(x -> x * x)\n",
+    "    .forEach(System.out::println);\n",
+    "\n",
+    "// Фильтрация\n",
+    "List<Integer> evenNumbers = list.stream()\n",
+    "    .filter(x -> x % 2 == 0)\n",
+    "    .toList();\n",
+    "System.out.println(\"\\nEven numbers: \" + evenNumbers);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example5-title",
+   "metadata": {},
+   "source": [
+    "## Пример 5: Функции и рекурсия"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "example5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Factorial of 5 is 120\n",
+      "\n",
+      "First 10 Fibonacci numbers:\n",
+      "0 1 1 2 3 5 8 13 21 34 \n"
+     ]
+    }
+   ],
+   "source": [
+    "// Функция для вычисления факториала\n",
+    "long factorial(int n) {\n",
+    "    if (n <= 1) {\n",
+    "        return 1;\n",
+    "    }\n",
+    "    return n * factorial(n - 1);\n",
+    "}\n",
+    "\n",
+    "// Функция для вычисления чисел Фибоначчи\n",
+    "int fibonacci(int n) {\n",
+    "    if (n <= 1) {\n",
+    "        return n;\n",
+    "    }\n",
+    "    return fibonacci(n - 1) + fibonacci(n - 2);\n",
+    "}\n",
+    "\n",
+    "int num = 5;\n",
+    "System.out.println(\"Factorial of \" + num + \" is \" + factorial(num));\n",
+    "\n",
+    "System.out.println(\"\\nFirst 10 Fibonacci numbers:\");\n",
+    "for (int i = 0; i < 10; i++) {\n",
+    "    System.out.print(fibonacci(i) + \" \");\n",
+    "}\n",
+    "System.out.println();"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example6-title",
+   "metadata": {},
+   "source": [
+    "## Пример 6: Работа со строками"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "example6",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original string: Java Programming\n",
+      "Length: 16\n",
+      "Uppercase: JAVA PROGRAMMING\n",
+      "Lowercase: java programming\n",
+      "Greeting: Hello, Java Programming!\n",
+      "Words: [Java, Programming]\n",
+      "String contains 'Java'\n"
+     ]
+    }
+   ],
+   "source": [
+    "String name = \"Java Programming\";\n",
+    "System.out.println(\"Original string: \" + name);\n",
+    "System.out.println(\"Length: \" + name.length());\n",
+    "System.out.println(\"Uppercase: \" + name.toUpperCase());\n",
+    "System.out.println(\"Lowercase: \" + name.toLowerCase());\n",
+    "\n",
+    "String greeting = \"Hello, \" + name + \"!\";\n",
+    "System.out.println(\"Greeting: \" + greeting);\n",
+    "\n",
+    "// Разделение строки\n",
+    "String[] words = name.split(\" \");\n",
+    "System.out.println(\"Words: \" + Arrays.toString(words));\n",
+    "\n",
+    "// Проверка содержимого\n",
+    "if (name.contains(\"Java\")) {\n",
+    "    System.out.println(\"String contains 'Java'\");\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example7-title",
+   "metadata": {},
+   "source": [
+    "## Пример 7: Классы и объектно-ориентированное программирование"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "example7",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "Name: Alice\n",
+      "Age: 30\n",
+      "City: Moscow\n",
+      "\n",
+      "ToString: Person{name='Alice', age=30, city='Moscow'}\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Person {\n",
+    "    private String name;\n",
+    "    private int age;\n",
+    "    private String city;\n",
+    "    \n",
+    "    public Person(String name, int age, String city) {\n",
+    "        this.name = name;\n",
+    "        this.age = age;\n",
+    "        this.city = city;\n",
+    "    }\n",
+    "    \n",
+    "    public String getName() { return name; }\n",
+    "    public int getAge() { return age; }\n",
+    "    public String getCity() { return city; }\n",
+    "    \n",
+    "    public void displayInfo() {\n",
+    "        System.out.println(\"Name: \" + name);\n",
+    "        System.out.println(\"Age: \" + age);\n",
+    "        System.out.println(\"City: \" + city);\n",
+    "    }\n",
+    "    \n",
+    "    @Override\n",
+    "    public String toString() {\n",
+    "        return \"Person{name='\" + name + \"', age=\" + age + \", city='\" + city + \"'}\";\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "Person person = new Person(\"Alice\", 30, \"Moscow\");\n",
+    "System.out.println(\"Person information:\");\n",
+    "person.displayInfo();\n",
+    "System.out.println(\"\\nToString: \" + person);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example8-title",
+   "metadata": {},
+   "source": [
+    "## Пример 8: HashMap и работа с коллекциями"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "example8",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Person information:\n",
+      "  languages: [Java, Python, JavaScript]\n",
+      "  city: Moscow\n",
+      "  name: Alice\n",
+      "  age: 30\n",
+      "\n",
+      "Number of languages: 3\n"
+     ]
+    }
+   ],
+   "source": [
+    "import java.util.*;\n",
+    "\n",
+    "Map<String, Object> person = new HashMap<>();\n",
+    "person.put(\"name\", \"Alice\");\n",
+    "person.put(\"age\", 30);\n",
+    "person.put(\"city\", \"Moscow\");\n",
+    "person.put(\"languages\", Arrays.asList(\"Java\", \"Python\", \"JavaScript\"));\n",
+    "\n",
+    "System.out.println(\"Person information:\");\n",
+    "for (Map.Entry<String, Object> entry : person.entrySet()) {\n",
+    "    System.out.println(\"  \" + entry.getKey() + \": \" + entry.getValue());\n",
+    "}\n",
+    "\n",
+    "List<String> languages = (List<String>) person.get(\"languages\");\n",
+    "System.out.println(\"\\nNumber of languages: \" + languages.size());"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example9-title",
+   "metadata": {},
+   "source": [
+    "## Пример 9: Работа с датами и временем"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "example9",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Current date and time: 2025-11-22T19:41:09.675814856\n",
+      "Formatted: 2025-11-22 19:41:09\n",
+      "In 7 days and 3 hours: 2025-11-29 22:41:09\n",
+      "Days since 2020-01-01: 2152\n"
+     ]
+    }
+   ],
+   "source": [
+    "import java.time.*;\n",
+    "import java.time.format.DateTimeFormatter;\n",
+    "\n",
+    "LocalDateTime now = LocalDateTime.now();\n",
+    "System.out.println(\"Current date and time: \" + now);\n",
+    "\n",
+    "DateTimeFormatter formatter = DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm:ss\");\n",
+    "System.out.println(\"Formatted: \" + now.format(formatter));\n",
+    "\n",
+    "// Добавление времени\n",
+    "LocalDateTime future = now.plusDays(7).plusHours(3);\n",
+    "System.out.println(\"In 7 days and 3 hours: \" + future.format(formatter));\n",
+    "\n",
+    "// Разница во времени\n",
+    "LocalDate past = LocalDate.of(2020, 1, 1);\n",
+    "LocalDate today = LocalDate.now();\n",
+    "long days = java.time.temporal.ChronoUnit.DAYS.between(past, today);\n",
+    "System.out.println(\"Days since 2020-01-01: \" + days);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example10-title",
+   "metadata": {},
+   "source": [
+    "## Пример 10: Обработка исключений"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "example10",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Index out of range: Index 5 out of bounds for length 3\n",
+      "Finally block executed.\n",
+      "Division by zero: / by zero\n"
+     ]
+    }
+   ],
+   "source": [
+    "try {\n",
+    "    int[] numbers = {1, 2, 3};\n",
+    "    System.out.println(\"Number at index 5: \" + numbers[5]); // ArrayIndexOutOfBoundsException\n",
+    "} catch (ArrayIndexOutOfBoundsException e) {\n",
+    "    System.out.println(\"Index out of range: \" + e.getMessage());\n",
+    "} catch (Exception e) {\n",
+    "    System.out.println(\"General error: \" + e.getMessage());\n",
+    "} finally {\n",
+    "    System.out.println(\"Finally block executed.\");\n",
+    "}\n",
+    "\n",
+    "// Деление на ноль\n",
+    "try {\n",
+    "    int result = 10 / 0;\n",
+    "} catch (ArithmeticException e) {\n",
+    "    System.out.println(\"Division by zero: \" + e.getMessage());\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example11-title",
+   "metadata": {},
+   "source": [
+    "## Пример 11: Работа с файлами"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "example11",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "File content:\n",
+      "Hello from Java!\n",
+      "This is a test file.\n",
+      "File I/O example.\n",
+      "\n",
+      "File size: 56 bytes\n",
+      "File deleted.\n"
+     ]
+    }
+   ],
+   "source": [
+    "import java.io.*;\n",
+    "import java.nio.file.*;\n",
+    "\n",
+    "String filename = System.getProperty(\"java.io.tmpdir\") + \"/test_java_file.txt\";\n",
+    "\n",
+    "// Запись в файл\n",
+    "try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {\n",
+    "    writer.println(\"Hello from Java!\");\n",
+    "    writer.println(\"This is a test file.\");\n",
+    "    writer.println(\"File I/O example.\");\n",
+    "}\n",
+    "\n",
+    "// Чтение из файла\n",
+    "try (BufferedReader reader = Files.newBufferedReader(Paths.get(filename))) {\n",
+    "    System.out.println(\"File content:\");\n",
+    "    String line;\n",
+    "    while ((line = reader.readLine()) != null) {\n",
+    "        System.out.println(line);\n",
+    "    }\n",
+    "}\n",
+    "\n",
+    "File file = new File(filename);\n",
+    "System.out.println(\"\\nFile size: \" + file.length() + \" bytes\");\n",
+    "\n",
+    "// Удаление файла\n",
+    "file.delete();\n",
+    "System.out.println(\"File deleted.\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "example12-title",
+   "metadata": {},
+   "source": [
+    "## Пример 12: Stream API и функциональное программирование"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "example12",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Squares: [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]\n",
+      "Even numbers: [2, 4, 6, 8, 10]\n",
+      "\n",
+      "Square map: {1=1, 2=4, 3=9, 4=16, 5=25}\n",
+      "Sum: 55\n",
+      "Average: 5.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "import java.util.*;\n",
+    "import java.util.stream.*;\n",
+    "\n",
+    "List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);\n",
+    "\n",
+    "// Генератор списка для квадратов\n",
+    "List<Integer> squares = numbers.stream()\n",
+    "    .map(x -> x * x)\n",
+    "    .collect(Collectors.toList());\n",
+    "System.out.println(\"Squares: \" + squares);\n",
+    "\n",
+    "// Фильтрация (только четные)\n",
+    "List<Integer> evenNumbers = numbers.stream()\n",
+    "    .filter(x -> x % 2 == 0)\n",
+    "    .collect(Collectors.toList());\n",
+    "System.out.println(\"Even numbers: \" + evenNumbers);\n",
+    "\n",
+    "// Генератор Map\n",
+    "Map<Integer, Integer> squareMap = numbers.stream()\n",
+    "    .limit(5)\n",
+    "    .collect(Collectors.toMap(x -> x, x -> x * x));\n",
+    "System.out.println(\"\\nSquare map: \" + squareMap);\n",
+    "\n",
+    "// Агрегация\n",
+    "int sum = numbers.stream().mapToInt(Integer::intValue).sum();\n",
+    "OptionalDouble average = numbers.stream().mapToInt(Integer::intValue).average();\n",
+    "System.out.println(\"Sum: \" + sum);\n",
+    "System.out.println(\"Average: \" + (average.isPresent() ? average.getAsDouble() : 0));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a3e1b5ba-6c69-4e37-b3e9-55cee0cee4d8",
+   "metadata": {},
+   "source": [
+    "## Списки"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "a638d390-13a7-4d68-907c-d43f3ab1451b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class Student {\n",
+    "    String name;\n",
+    "    int age;\n",
+    "    public Student(String name,int age){\n",
+    "        this.name=name;\n",
+    "        this.age=age;\n",
+    "    }\n",
+    "    public String toString(){\n",
+    "        return \"Student \"+name + \"(\" +age+\")\";\n",
+    "    }\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "a777c0b1-69d1-4e4a-8584-6ac4204fcb18",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[Student Vasya(18), Student Petya(19)]\n"
+     ]
+    }
+   ],
+   "source": [
+    "Student[] lsu = { new Student(\"Vasya\",18),new Student(\"Petya\",19)};\n",
+    "System.out.println(Arrays.toString(lsu));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "dc94cfe4-9d0c-49e0-bdec-3018704a5e34",
+   "metadata": {},
+   "source": [
+    "## Ввод"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "302a5a1e-407c-4054-97e8-3a417e371ea3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Enter your name: "
+     ]
+    },
+    {
+     "name": "stdin",
+     "output_type": "stream",
+     "text": [
+      " Вася\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Hello, Вася!\n"
+     ]
+    }
+   ],
+   "source": [
+    "import java.util.Scanner;\n",
+    "\n",
+    "Scanner in = new Scanner(System.in);\n",
+    "\n",
+    "System.out.print(\"Enter your name: \");\n",
+    "System.out.flush();              // иногда помогает, чтобы текст сразу появился\n",
+    "\n",
+    "String name = in.nextLine();\n",
+    "\n",
+    "System.out.println(\"Hello, \" + name + \"!\");"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "2eed03fc-4784-4bf9-a8a7-c581a19f3fb3",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Java",
+   "language": "java",
+   "name": "java"
+  },
+  "language_info": {
+   "codemirror_mode": "java",
+   "file_extension": ".jshell",
+   "mimetype": "text/x-java-source",
+   "name": "Java",
+   "pygments_lexer": "java",
+   "version": "17.0.16+8-Ubuntu-0ubuntu122.04.1"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
