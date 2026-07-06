@@ -1,0 +1,184 @@
+---
+- name: Reconfigure Bacula File Daemon on all client hosts
+  hosts: client.client
+  become: yes
+  gather_facts: false
+  vars:
+    bacula_fd_conf: "/etc/bacula/bacula-fd.conf"
+    
+    cl_name: "{{ inventory_hostname }}-fd"
+    paths: "{{ services.client.config.Paths | default(['/home/adcm']) }}"
+    
+    dir_host: "{{ groups['director.director'][0] }}"
+    bacula_dir_pw_adcm: "{{ hostvars[dir_host]['services']['director']['config']['bacula_dir_pw'] }}"
+    
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+    client_hosts: "{{ groups['client.client'] }}"
+
+  tasks:
+    # ==========================================
+    # Configuring the local bacula-sd.conf on each host
+    # ==========================================
+    - name: Debug client configuration
+      debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Client Name: {{ cl_name }}"
+          - "Paths: {{ paths }}"
+
+    - name: Overwrite bacula-fd.conf with empty content
+      copy:
+        dest: "{{ bacula_fd_conf }}"
+        content: |
+          #
+          # Bacula File Daemon Configuration - Managed by ADCM
+          # Host: {{ inventory_hostname }}
+          #
+        force: yes
+        owner: bacula
+        group: bacula
+        mode: '0640'
+
+    - name: Add FileDaemon block
+      blockinfile:
+        path: "{{ bacula_fd_conf }}"
+        block: |
+          FileDaemon {
+            Name = {{ cl_name }}
+            FDport = 9102
+            WorkingDirectory = "/var/lib/bacula"
+            PidDirectory = "/var/run/bacula"
+            Maximum Concurrent Jobs = 20
+          }
+        marker: "# {mark} FILEDAEMON BLOCK"
+
+    - name: Add Director block
+      blockinfile:
+        path: "{{ bacula_fd_conf }}"
+        block: |
+          Director {
+            Name = {{ dir_host }}-dir
+            Password = "{{ bacula_dir_pw_adcm }}"
+          }
+        marker: "# {mark} DIRECTOR BLOCK"
+
+    - name: Add Messages block
+      blockinfile:
+        path: "{{ bacula_fd_conf }}"
+        block: |
+          Messages {
+            Name = Standard
+            director = {{ dir_host }}-dir = all, !skipped, !restored
+          }
+        marker: "# {mark} MESSAGES BLOCK"
+
+    - name: Validate bacula-fd.conf syntax
+      command: bacula-fd -t
+      register: validate_result
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Restart File Daemon
+      service:
+        name: bacula-fd
+        state: restarted
+        enabled: yes
+      ignore_errors: yes
+
+    # ==========================================
+    # Updating the Director config
+    # ==========================================
+    - name: Debug client hosts for Director update
+      debug:
+        msg: "Client hosts: {{ client_hosts }}"
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Remove all existing ANSIBLE MANAGED FILESET blocks
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED FILESET {{ item }}_fs"
+        state: absent
+      loop: "{{ client_hosts }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Add FileSet blocks to Director for each client host
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED FILESET {{ item }}_fs"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          FileSet {
+            Name = "{{ item }}_fs"
+            Include {
+              Options {
+                Compression = GZIP
+                Signature = MD5
+              }
+          {% for path in hostvars[item].services.client.config.Paths | default(['/home/adcm']) %}
+              File = {{ path }}
+          {% endfor %}
+            }
+          }
+      loop: "{{ client_hosts }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Rollback on validation failure
+      block:
+        - name: Remove added FileSet blocks
+          blockinfile:
+            path: "{{ bacula_dir_conf }}"
+            marker: "# {mark} ANSIBLE MANAGED FILESET {{ item }}_fs"
+            state: absent
+          loop: "{{ client_hosts }}"
+          loop_control:
+            loop_var: item
+            label: "{{ item }}"
+
+        - name: Fail with error message
+          fail:
+            msg: |
+              Director config validation failed! Changes rolled back.
+              Error: {{ validate_result.stdout }} {{ validate_result.stderr }}
+      when: validate_result.rc != 0
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Reload Director configuration
+      shell: 'echo "reload" | bconsole'
+      register: reload_result
+      failed_when: "'1000 OK' not in reload_result.stdout"
+      when: validate_result.rc == 0
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Show reconfiguration summary
+      debug:
+        msg: |
+          ========================================
+          Client reconfiguration completed!
+          ========================================
+          Client hosts processed: {{ client_hosts | length }}
+          {% for host in client_hosts %}
+          - {{ host }}: {{ host }}_fs
+            IP: {{ hostvars[host].ansible_host }}
+            Paths: {{ hostvars[host].services.client.config.Paths | default(['/home/adcm']) | join(', ') }}
+          {% endfor %}
+          ========================================
+      run_once: true

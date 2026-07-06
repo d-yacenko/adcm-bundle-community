@@ -1,0 +1,56 @@
+---
+- name: Run Bacula Backup Job Manually
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    job_name: "{{ job.config.job_name }}"
+
+  tasks:
+    - name: Validate job_name is provided
+      fail:
+        msg: "Job name is required."
+      when: job_name is not defined or job_name | length == 0
+
+    - name: Check if job exists in catalog
+      shell: 'echo "list jobs" | bconsole 2>&1'
+      register: jobs_list
+      changed_when: false
+      failed_when: false
+
+    - name: Verify job name exists
+      fail:
+        msg: |
+          Job '{{ job_name }}' not found!
+          Please use 'List Jobs' action to see available jobs.
+      when: job_name not in jobs_list.stdout
+
+    - name: Run the job manually
+      shell: 'echo "run job={{ job_name }} yes" | bconsole 2>&1'
+      register: run_result
+      changed_when: false
+      failed_when: false
+
+    - name: Extract job ID
+      set_fact:
+        run_job_id: "{{ run_result.stdout | regex_findall('JobId=(\\d+)') | last | default('') }}"
+
+    - name: Fail if job was not started
+      fail:
+        msg: |
+          Failed to start job '{{ job_name }}'!
+          Output: {{ run_result.stdout }}
+      when: run_job_id | length == 0
+
+    - name: Show result
+      debug:
+        msg: |
+          ========================================
+          JOB STARTED SUCCESSFULLY
+          ========================================
+          Job Name:    {{ job_name }}
+          Job ID:      {{ run_job_id }}
+          ========================================
+          The job is now running in the background.
+          Use 'List Jobs' action to check its status.
+          ========================================

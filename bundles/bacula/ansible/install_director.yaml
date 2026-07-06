@@ -1,0 +1,491 @@
+---
+- name: Install Bacula Director and register all components
+  hosts: director.director
+  become: yes
+  gather_facts: true
+  vars:
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+    bconsole_conf: "/etc/bacula/bconsole.conf"
+    director_name: "{{ inventory_hostname }}-dir"
+    dir_port: "{{ services.director.config.dir_port }}"
+    working_dir: "{{ services.director.config.working_directory }}"
+    pid_dir: "{{ services.director.config.pid_directory }}"
+    max_concurrent_jobs: "{{ services.director.config.max_concurrent_jobs }}"
+    dir_password: "{{ services.director.config.bacula_dir_pw }}"
+    pg_host: "{{ groups['postgresql.postgresql'][0] }}"
+    pg_user: "{{ hostvars[pg_host]['services']['postgresql']['config']['postgresql_user'] }}"
+    pg_password: "{{ hostvars[pg_host]['services']['postgresql']['config']['postgresql_password'] }}"
+    pg_dbname: "{{ hostvars[pg_host]['services']['postgresql']['config']['postgresql_dbname'] }}"
+    pg_ip: "{{ hostvars[pg_host]['ansible_host'] }}"
+    all_clients: "{{ groups['client.client'] | default([]) }}"
+    all_storages: "{{ groups['storage.storage'] | default([]) }}"
+
+    # Параметры из конфига Install
+    job_name_prefix: "{{ job.config.job_name | default('Backup') }}"
+    backup_level: "{{ job.config.Backup_level | default('Full') }}"
+    storage_host: "{{ job.config.storage_host }}"
+    messages_name: "{{ job.config.messages_name | default('Standard') }}"
+    schedule_config: "{{ job.config.schedule }}"
+    storage_name: "{{ storage_host }}_sd"
+    schedule_name: "{{ job_name_prefix }}_Schedule"
+
+  tasks:
+    # ==========================================
+    # Validation of input parameters
+    # ==========================================
+    - name: Check if clients exist
+      fail:
+        msg: "No clients found in inventory. At least one client is required for installation."
+      when: all_clients | length == 0
+
+    - name: Check if storage exists
+      fail:
+        msg: "No storage found in inventory. At least one storage is required for installation."
+      when: all_storages | length == 0
+
+    # ==========================================
+    # Installing Bacula Director
+    # ==========================================
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Bacula Director and console
+      apt:
+        name:
+          - bacula-director
+          - bacula-console
+        state: present
+
+    # ==========================================
+    # Creating bacula-dir.conf (basic structure)
+    # ==========================================
+    - name: Create bacula-dir.conf from scratch
+      copy:
+        dest: "{{ bacula_dir_conf }}"
+        content: |
+          #
+          # Bacula Director Configuration - Managed by ADCM
+          #
+          Director {
+            Name = {{ director_name }}
+            DIRport = {{ dir_port }}
+            QueryFile = "/etc/bacula/scripts/query.sql"
+            WorkingDirectory = "{{ working_dir }}"
+            PidDirectory = "{{ pid_dir }}"
+            Maximum Concurrent Jobs = {{ max_concurrent_jobs }}
+            Password = "{{ dir_password }}"
+          }
+          Catalog {
+            Name = MyCatalog
+            dbname = "{{ pg_dbname }}"
+            dbuser = "{{ pg_user }}"
+            dbpassword = "{{ pg_password }}"
+            dbaddress = "{{ pg_ip }}"
+            dbport = "5432"
+          }
+          Messages {
+            Name = Standard
+            director = {{ director_name }} = all, !skipped, !restored
+          }
+          Messages {
+            Name = Daemon
+            director = {{ director_name }} = all, !skipped, !restored
+          }
+          # BEGIN POOL BLOCK
+          Pool {
+            Name = Default
+            Pool Type = Backup
+            Recycle = yes
+            AutoPrune = yes
+            Volume Retention = 30 days
+          }
+          # END POOL BLOCK
+        force: yes
+        owner: bacula
+        group: bacula
+        mode: '0640'
+
+    # ==========================================
+    # Customer registration
+    # ==========================================
+    - name: Add Client blocks to Director
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED CLIENT {{ item }}-fd"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          Client {
+            Name = {{ item }}-fd
+            Address = {{ hostvars[item].ansible_host }}
+            FDPort = 9102
+            Catalog = MyCatalog
+            Password = "{{ hostvars[item].services.director.config.bacula_dir_pw }}"
+            File Retention = 30 days
+            Job Retention = 6 months
+            AutoPrune = yes
+          }
+      loop: "{{ all_clients }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    # ==========================================
+    # Creating a FileSet for each client
+    # ==========================================
+    - name: Add FileSet blocks to Director for each client
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED FILESET {{ item }}_fs"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          FileSet {
+            Name = "{{ item }}_fs"
+            Include {
+              Options {
+                Compression = GZIP
+                Signature = MD5
+              }
+          {% for path in hostvars[item].services.client.config.Paths | default(['/home/adcm']) %}
+              File = {{ path }}
+          {% endfor %}
+            }
+          }
+      loop: "{{ all_clients }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    # ==========================================
+    # Storage Registration
+    # ==========================================
+    - name: Add Storage blocks to Director
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED STORAGE {{ item }}_sd"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          Storage {
+            Name = {{ item }}_sd
+            Address = {{ hostvars[item].ansible_host }}
+            SDPort = 9103
+            Password = "{{ hostvars[item].services.director.config.bacula_dir_pw }}"
+            Device = {{ hostvars[item].services.storage.config.devices | default({'FileStorage-1': '/var/lib/bacula/volumes'}) | dict2items | map(attribute='key') | join(', ') }}
+            Media Type = File
+          }
+      loop: "{{ all_storages }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    # ==========================================
+    # Creating a schedule line
+    # ==========================================
+    - name: Initialize run string
+      set_fact:
+        run_string: "Run = {{ backup_level }}"
+
+    - name: Add daily frequency
+      set_fact:
+        run_string: "{{ run_string }} daily"
+      when: schedule_config.Frequency._selection == 'daily'
+
+    - name: Add hourly frequency
+      set_fact:
+        run_string: "{{ run_string }} hourly"
+      when: schedule_config.Frequency._selection == 'hourly'
+
+    - name: Add weekly frequency
+      set_fact:
+        run_string: "{{ run_string }} {{ schedule_config.Frequency.weekly.day | lower }}"
+      when: schedule_config.Frequency._selection == 'weekly'
+
+    - name: Add monthly day_of_month frequency
+      set_fact:
+        run_string: "{{ run_string }} monthly {{ schedule_config.Frequency.monthly.day_selector.day_of_month.day }}"
+      when:
+        - schedule_config.Frequency._selection == 'monthly'
+        - schedule_config.Frequency.monthly.day_selector._selection == 'day_of_month'
+
+    - name: Add monthly day_of_week frequency
+      set_fact:
+        run_string: "{{ run_string }} monthly {{ schedule_config.Frequency.monthly.day_selector.day_of_week.monthly_week }} {{ schedule_config.Frequency.monthly.day_selector.day_of_week.monthly_weekday | lower }}"
+      when:
+        - schedule_config.Frequency._selection == 'monthly'
+        - schedule_config.Frequency.monthly.day_selector._selection == 'day_of_week'
+
+    - name: Add mon-fri frequency
+      set_fact:
+        run_string: "{{ run_string }} mon-fri"
+      when: schedule_config.Frequency._selection == 'mon_fri'
+
+    - name: Add mon-sat frequency
+      set_fact:
+        run_string: "{{ run_string }} mon-sat"
+      when: schedule_config.Frequency._selection == 'mon_sat'
+
+    - name: Add time to schedule string
+      set_fact:
+        run_string: "{{ run_string }} at {{ schedule_config.Time }}"
+
+    - name: Show generated schedule
+      debug:
+        msg: "Schedule run string: {{ run_string }}"
+
+    # ==========================================
+    # Creating a Schedule
+    # ==========================================
+    - name: Add Schedule block to Director
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED SCHEDULE {{ schedule_name }}"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          Schedule {
+            Name = "{{ schedule_name }}"
+            {{ run_string }}
+          }
+
+    # ==========================================
+    # Creating a Job for each client
+    # ==========================================
+    - name: Add Job blocks to Director for each client
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED JOB {{ job_name_prefix }}_{{ item }}"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          Job {
+            Name = "{{ job_name_prefix }}_{{ item }}"
+            Type = Backup
+            Level = {{ backup_level }}
+            Client = {{ item }}-fd
+            FileSet = "{{ item }}_fs"
+            Schedule = "{{ schedule_name }}"
+            Storage = {{ storage_name }}
+            Pool = Default
+            Messages = {{ messages_name }}
+            Priority = 10
+            Write Bootstrap = "/var/lib/bacula/%c.bsr"
+          }
+      loop: "{{ all_clients }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    # ==========================================
+    # Setting up bconsole.conf
+    # ==========================================
+    - name: Configure bconsole.conf with correct password
+      copy:
+        dest: "{{ bconsole_conf }}"
+        content: |
+          Director {
+            Name = {{ director_name }}
+            DIRport = {{ dir_port }}
+            address = localhost
+            Password = "{{ dir_password }}"
+          }
+        force: yes
+        owner: root
+        group: root
+        mode: '0640'
+
+    # ==========================================
+    # Configuration validation
+    # ==========================================
+    - name: Validate bacula-dir.conf manually
+      command: /usr/sbin/bacula-dir -t -c {{ bacula_dir_conf }}
+      register: manual_validate
+      changed_when: false
+      failed_when: false
+
+    - name: Show validation output
+      debug:
+        msg: |
+          Validation result: rc={{ manual_validate.rc }}
+          stdout: {{ manual_validate.stdout }}
+          stderr: {{ manual_validate.stderr }}
+
+    - name: Fail if config is invalid
+      fail:
+        msg: |
+          bacula-dir.conf is invalid! Fix the errors before proceeding.
+          stdout: {{ manual_validate.stdout }}
+          stderr: {{ manual_validate.stderr }}
+      when: manual_validate.rc != 0
+
+    # ==========================================
+    # Run Director
+    # ==========================================
+    - name: Wait for Director port to be released
+      wait_for:
+        port: "{{ dir_port }}"
+        state: stopped
+        timeout: 10
+      ignore_errors: yes
+
+    - name: Start Director
+      service:
+        name: bacula-dir
+        state: started
+        enabled: yes
+ 
+    - name: Wait for Director to become active (check service status)
+      command: systemctl is-active bacula-dir
+      register: service_status
+      until: service_status.stdout == 'active'
+      retries: 15
+      delay: 5
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Fail if Director is not active after retries
+      fail:
+        msg: "Director service did not become active after 75 seconds. Check logs: journalctl -u bacula-dir"
+      when: service_status.stdout != 'active'
+
+    # ==========================================
+    # bconsole connection test
+    # ==========================================
+    - name: Test bconsole connection
+      shell: 'echo "status" | bconsole'
+      register: bconsole_test
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if bconsole cannot connect
+      fail:
+        msg: |
+          bconsole cannot connect to Director!
+          Test output: {{ bconsole_test.stdout }}
+          stderr: {{ bconsole_test.stderr }}
+      when: bconsole_test.rc != 0 or '1000 OK' not in bconsole_test.stdout
+
+    # ==========================================
+    # Creating an Initial Volume for Storage
+    # ==========================================
+    - name: Wait for Director to fully initialize
+      pause:
+        seconds: 5
+
+    - name: Create initial volume for each storage
+      shell: |
+        echo "label storage={{ item }}_sd volume={{ item }}_vol_1 pool=Default" | bconsole
+      loop: "{{ all_storages }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      register: label_results
+      failed_when: "'OK label' not in label_results.stdout and 'already labeled' not in label_results.stdout"
+      changed_when: "'OK label' in label_results.stdout"
+
+    - name: Wait for volumes to be fully initialized
+      pause:
+        seconds: 5
+
+    - name: Verify volume status after creation
+      shell: 'echo "list volumes" | bconsole 2>&1'
+      register: volumes_check
+      changed_when: false
+
+    - name: Extract Error volumes
+      set_fact:
+        error_volumes: >-
+          {{ volumes_check.stdout_lines
+             | select('search', 'Error')
+             | map('regex_replace', '^\\|\\s+\\d+\\s+\\|\\s+(\\S+)\\s+\\|.*', '\\1')
+             | list }}
+
+    - name: Retry creation of Error volumes
+      block:
+        - name: Show which volumes need retry
+          debug:
+            msg: "Volumes in Error status, retrying: {{ error_volumes }}"
+
+        - name: Delete and recreate each Error volume
+          shell: |
+            echo "delete volume={{ item }}" | bconsole
+            sleep 3
+            echo "label storage={{ item | regex_replace('_vol_\\d+$', '') }}_sd volume={{ item }} pool=Default" | bconsole
+          loop: "{{ error_volumes }}"
+          loop_control:
+            loop_var: item
+            label: "{{ item }}"
+          register: retry_results
+          failed_when: "'OK label' not in retry_results.stdout"
+
+        - name: Wait after retry
+          pause:
+            seconds: 3
+
+        - name: Verify volumes after retry
+          shell: 'echo "list volumes" | bconsole 2>&1'
+          register: retry_volumes_check
+          changed_when: false
+
+        - name: Check for remaining Error volumes
+          set_fact:
+            remaining_errors: "{{ retry_volumes_check.stdout_lines | select('search', 'Error') | list }}"
+
+        - name: Fail if volumes still in Error
+          fail:
+            msg: |
+              Some volumes are still in Error status after retry!
+              
+              Error volumes:
+              {% for line in remaining_errors %}
+              {{ line }}
+              {% endfor %}
+              
+              This indicates a persistent issue with Storage Daemon.
+              Check: systemctl status bacula-sd on affected hosts
+          when: remaining_errors | length > 0
+
+      when: error_volumes | length > 0
+
+    - name: Show volume creation summary
+      debug:
+        msg: |
+          ========================================
+          Volumes created for all storages:
+          ========================================
+          {% for item in all_storages %}
+          Storage: {{ item }}_sd → Volume: {{ item }}_vol_1
+          {% endfor %}
+          ========================================
+
+    # ==========================================
+    # Finaly report
+    # ==========================================
+    - name: Show installation summary
+      debug:
+        msg: |
+          ========================================
+          DIRECTOR INSTALLATION COMPLETED
+          ========================================
+          Director:           {{ director_name }}
+          Clients registered: {{ all_clients | length }}
+          Storages registered:{{ all_storages | length }}
+          Jobs created:       {{ all_clients | length }}
+          Schedule:           {{ schedule_name }}
+          Run string:         {{ run_string }}
+          ========================================
+          Created Jobs:
+          {% for client in all_clients %}
+            - {{ job_name_prefix }}_{{ client }} → {{ storage_name }}
+          {% endfor %}
+          ========================================
+
+    # ==========================================
+    # Изменение состояния сервиса director в ADCM
+    # ==========================================
+    - name: Set director service state to installed
+      adcm_state:
+        type: "service"
+        service_name: "director"
+        state: "installed"
+      delegate_to: localhost
+      connection: local
+      run_once: true

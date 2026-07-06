@@ -1,0 +1,191 @@
+---
+- name: Remove clients from Director configuration
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+    clients_to_remove: "{{ groups['client.client.remove'] | default([]) }}"
+
+  tasks:
+    - name: Debug clients to remove
+      debug:
+        msg: "Removing clients: {{ clients_to_remove }}"
+
+    - name: Find all Job blocks that reference these clients
+      shell: |
+        grep -B 2 -A 15 "Client = {{ item }}-fd" {{ bacula_dir_conf }} | grep "Name = " | awk '{print $3}'
+      loop: "{{ clients_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      register: dependent_jobs
+      changed_when: false
+      failed_when: false
+
+    - name: Parse job names
+      set_fact:
+        all_job_names: "{{ dependent_jobs.results | map(attribute='stdout_lines') | flatten | map('trim') | list }}"
+
+    - name: Show dependent jobs
+      debug:
+        msg: "Jobs to be removed: {{ all_job_names }}"
+
+    # ==================== НАЧАЛО БЛОКА ПРОВЕРОК ====================
+
+    - name: Read Director configuration for safety checks
+      slurp:
+        src: "{{ bacula_dir_conf }}"
+      register: bacula_dir_conf_raw
+
+    - name: Count total Job blocks in configuration
+      set_fact:
+        total_jobs_count: "{{ (bacula_dir_conf_raw.content | b64decode | regex_findall('^\\s*Job\\s*\\{', multiline=True)) | length }}"
+
+    - name: "SAFETY CHECK 1: Find exactly which clients are used by doomed jobs"
+      shell: |
+        awk -v jobs_regex="^({{ all_job_names | join('|') }})$" '
+          /^\s*Job\s*\{/ { in_job=1; job_name=""; job_client=""; }
+          in_job && /Name\s*=/ { 
+              val=$0; sub(/.*Name\s*=\s*"?/, "", val); sub(/".*/, "", val); job_name=val; 
+          }
+          in_job && /Client\s*=/ { 
+              val=$0; sub(/.*Client\s*=\s*"?/, "", val); sub(/".*/, "", val); job_client=val; 
+          }
+          /^\s*\}/ && in_job {
+            if (job_name != "" && match(job_name, jobs_regex)) {
+              if (job_client != "") {
+                print "- Job \"" job_name "\" uses Client \"" job_client "\"";
+              }
+            }
+            in_job=0;
+          }
+        ' {{ bacula_dir_conf }}
+      register: conflicting_clients_raw
+      changed_when: false
+      failed_when: false
+
+    - name: "DEBUG: Show raw awk output for client conflicts"
+      debug:
+        var: conflicting_clients_raw.stdout_lines
+
+    - name: "SAFETY CHECK 1: Fail if we are about to delete the LAST remaining Job"
+      fail:
+        msg: |
+          FATAL ERROR: Cannot remove clients!
+          You are trying to remove clients: {{ clients_to_remove | join(', ') }}
+          These clients are used by {{ all_job_names | length }} job(s): {{ all_job_names | join(', ') }}.
+          However, the TOTAL number of Jobs in the Director config is {{ total_jobs_count }}.
+          
+          If we proceed, 0 Jobs will remain, and bacula-dir will crash on startup!
+          
+          SPECIFIC CONFLICT:
+          {{ conflicting_clients_raw.stdout_lines | default(['No specific conflicts found by awk']) | join('\n') }}
+          
+          ACTION REQUIRED:
+          Please remove the conflicting clients from the 'client.client.remove' inventory group, 
+          OR manually reassign the 'Client' directive in the job(s) to a different client.
+      when: 
+        - all_job_names | length > 0
+        - all_job_names | length == total_jobs_count | int
+
+    - name: "SAFETY CHECK 2: Find ALL jobs referencing removed clients (using robust awk)"
+      shell: |
+        awk -v clients_regex="^({{ clients_to_remove | join('|') }})" '
+          /^\s*Job\s*\{/ { in_job=1; job_name=""; }
+          in_job && /Name\s*=/ { 
+              val=$0; sub(/.*Name\s*=\s*"?/, "", val); sub(/".*/, "", val); job_name=val; 
+          }
+          in_job && /Client\s*=/ { 
+              val=$0; sub(/.*Client\s*=\s*"?/, "", val); sub(/".*/, "", val); 
+              # Регулярка ^client_name автоматически матчит и client_name-fd
+              if (match(val, clients_regex)) {
+                  print job_name;
+              }
+          }
+          /^\s*\}/ && in_job { in_job=0; }
+        ' {{ bacula_dir_conf }} | sort -u
+      register: all_actual_jobs_using_clients
+      changed_when: false
+      failed_when: false
+
+    - name: "DEBUG: Show raw awk output for orphaned jobs"
+      debug:
+        var: all_actual_jobs_using_clients.stdout_lines
+
+    - name: "SAFETY CHECK 2: Calculate orphaned jobs"
+      set_fact:
+        orphaned_jobs: "{{ (all_actual_jobs_using_clients.stdout_lines | map('trim') | list) | difference(all_job_names) }}"
+
+    - name: "SAFETY CHECK 2: Fail if orphaned jobs found"
+      fail:
+        msg: |
+          FATAL ERROR: The following jobs still reference the removed clients but were NOT scheduled for removal:
+          {{ orphaned_jobs | join(', ') }}
+          
+          This usually means the initial grep missed them.
+          Please check the configuration manually or add them to the removal list.
+      when: orphaned_jobs | length > 0
+
+    # ==================== КОНЕЦ БЛОКА ПРОВЕРОК ====================
+
+    - name: Remove Job blocks
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED JOB {{ item }}"
+        state: absent
+      loop: "{{ all_job_names }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      when: all_job_names | length > 0
+
+    - name: Remove Schedule blocks for dependent jobs
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED SCHEDULE Schedule_{{ item }}"
+        state: absent
+      loop: "{{ all_job_names }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      when: all_job_names | length > 0
+
+    - name: Remove FileSet blocks for clients
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED FILESET {{ item }}_fs"
+        state: absent
+      loop: "{{ clients_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    - name: Remove Client blocks
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED CLIENT {{ item }}-fd"
+        state: absent
+      loop: "{{ clients_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if validation failed
+      fail:
+        msg: |
+          Director config validation failed after removing clients!
+          Error: {{ validate_result.stderr | default(validate_result.stdout) }}
+          
+          Please check the config manually.
+      when: validate_result.rc != 0
+
+    - name: Reload Director
+      shell: 'echo "reload" | bconsole'
+      when: validate_result.rc == 0

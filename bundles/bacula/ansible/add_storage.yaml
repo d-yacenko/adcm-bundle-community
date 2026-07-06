@@ -1,0 +1,137 @@
+---
+- name: Install Bacula Storage Daemon on new storage hosts
+  hosts: storage.storage.add
+  become: yes
+  gather_facts: true
+  vars:
+    bacula_sd_conf: "/etc/bacula/bacula-sd.conf"
+    st_name: "{{ inventory_hostname }}_sd"
+    dir_host: "{{ groups['director.director'][0] }}"
+    bacula_dir_pw_adcm: "{{ hostvars[dir_host]['services']['director']['config']['bacula_dir_pw'] }}"
+    devices: "{{ services.storage.config.devices | default({'FileStorage-1': '/var/lib/bacula/volumes'}) }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Bacula Storage Daemon
+      apt:
+        name: bacula-sd
+        state: present
+
+    - name: Ensure /etc/bacula directory exists
+      file:
+        path: /etc/bacula
+        state: directory
+        owner: bacula
+        group: bacula
+        mode: '0755'
+
+    - name: Ensure /var/lib/bacula directory exists
+      file:
+        path: /var/lib/bacula
+        state: directory
+        owner: bacula
+        group: bacula
+        mode: '0755'
+
+    - name: Ensure /var/run/bacula directory exists
+      file:
+        path: /var/run/bacula
+        state: directory
+        owner: bacula
+        group: bacula
+        mode: '0755'
+
+    - name: Create device directories
+      file:
+        path: "{{ item.value }}"
+        state: directory
+        owner: bacula
+        group: bacula
+        mode: '0750'
+      loop: "{{ devices | dict2items }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item.key }}: {{ item.value }}"
+
+    - name: Overwrite bacula-sd.conf with empty content
+      copy:
+        dest: "{{ bacula_sd_conf }}"
+        content: |
+          #
+          # Bacula Storage Daemon Configuration - Managed by ADCM
+          #
+        force: yes
+        owner: bacula
+        group: bacula
+        mode: '0640'
+
+    - name: Add Storage block
+      blockinfile:
+        path: "{{ bacula_sd_conf }}"
+        block: |
+          Storage {
+            Name = {{ st_name }}
+            SDPort = 9103
+            WorkingDirectory = "/var/lib/bacula"
+            PidDirectory = "/var/run/bacula"
+            Maximum Concurrent Jobs = 20
+          }
+        marker: "# {mark} STORAGE BLOCK"
+
+    - name: Add Device blocks
+      blockinfile:
+        path: "{{ bacula_sd_conf }}"
+        marker: "# {mark} DEVICE {{ item.key }}"
+        insertbefore: "^# BEGIN DIRECTOR BLOCK"
+        block: |
+          Device {
+            Name = {{ item.key }}
+            Media Type = File
+            Archive Device = {{ item.value }}
+            LabelMedia = yes
+            Random Access = yes
+            AutomaticMount = yes
+            RemovableMedia = no
+            AlwaysOpen = no
+          }
+      loop: "{{ devices | dict2items }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item.key }}"
+
+    - name: Add Director block
+      blockinfile:
+        path: "{{ bacula_sd_conf }}"
+        block: |
+          Director {
+            Name = {{ dir_host }}-dir
+            Password = "{{ bacula_dir_pw_adcm }}"
+          }
+        marker: "# {mark} DIRECTOR BLOCK"
+
+    - name: Add Messages block
+      blockinfile:
+        path: "{{ bacula_sd_conf }}"
+        block: |
+          Messages {
+            Name = Standard
+            director = {{ dir_host }}-dir = all
+          }
+        marker: "# {mark} MESSAGES BLOCK"
+
+    - name: Validate bacula-sd.conf syntax
+      command: bacula-sd -t
+      register: validate_result
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Restart Storage Daemon
+      service:
+        name: bacula-sd
+        state: restarted
+        enabled: yes
+

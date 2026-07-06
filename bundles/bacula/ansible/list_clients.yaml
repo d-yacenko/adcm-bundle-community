@@ -1,0 +1,114 @@
+---
+- name: List Bacula Clients
+  hosts: director.director
+  become: yes
+  gather_facts: false
+
+  tasks:
+    - name: Get client list from Director config
+      shell: 'echo "show client" | bconsole 2>&1'
+      register: show_client
+      changed_when: false
+
+    - name: Get fileset list
+      shell: 'echo "show fileset" | bconsole 2>&1'
+      register: show_fileset
+      changed_when: false
+
+    # ------------------ Клиенты ------------------
+    - name: Parse client list into JSON string
+      set_fact:
+        _client_details_json: >-
+          {% set ns = namespace(clients=[]) %}
+          {% for line in show_client.stdout_lines %}
+            {% if line.startswith('Client:') %}
+              {% set parts = line.split() %}
+              
+              {% set name_list = parts | select('match', '^Name=') | map('regex_replace', '^Name=', '') | list %}
+              {% set name = name_list[0] if name_list else '' %}
+              
+              {% set addr_list = parts | select('match', '^Address=') | map('regex_replace', '^Address=', '') | list %}
+              {% set address = addr_list[0] if addr_list else '' %}
+              
+              {% set port_list = parts | select('match', '^FDport=') | map('regex_replace', '^FDport=', '') | list %}
+              {% set fdport = port_list[0] if port_list else '' %}
+              
+              {% set _ = ns.clients.append({'name': name, 'address': address, 'fdport': fdport}) %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.clients | to_json }}
+
+    - name: Convert client JSON to native list
+      set_fact:
+        client_details: "{{ _client_details_json | from_json }}"
+
+    # ------------------ Файловые наборы (Исправлено) ------------------
+    - name: Parse filesets into JSON string
+      set_fact:
+        _fileset_list_json: >-
+          {% set ns = namespace(fs_list=[]) %}
+          {% set current_fs = namespace(data=none) %}
+          {% for line in show_fileset.stdout_lines %}
+            {% if 'FileSet:' in line %}
+              {% set fs_name = line | regex_replace('.*FileSet:\\s*name=([^\\s]+).*', '\\1') %}
+              {% set current_fs.data = {'name': fs_name, 'paths': []} %}
+              {% set _ = ns.fs_list.append(current_fs.data) %}
+            {% elif current_fs.data is not none %}
+              {% set cleaned = line.strip() %}
+              {% set path = '' %}
+              
+              {# Поддержка формата "File = /path" или "File=/path" #}
+              {% if 'File =' in cleaned or 'File=' in cleaned %}
+                {% set path = cleaned | regex_replace('.*File\\s*=\\s*', '') | trim %}
+              {# Поддержка формата "I /path" #}
+              {% elif cleaned.startswith('I ') %}
+                {% set path = cleaned[2:].strip() %}
+              {% endif %}
+              
+              {% if path %}
+                {% set _ = current_fs.data.paths.append(path) %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.fs_list | to_json }}
+
+    - name: Convert fileset JSON to native list
+      set_fact:
+        fileset_list: "{{ _fileset_list_json | from_json }}"
+
+        # ------------------ Отчёт ------------------
+    - name: Build client report
+      set_fact:
+        client_report: |
+          ========================================
+          BACULA CLIENTS OVERVIEW
+          ========================================
+
+          CLIENTS:
+          {% for client in client_details %}
+           ----------------------------------------------
+            {{ client.name }}  ({{ client.address }}:{{ client.fdport }})
+          {% set target_fs = client.name | replace('-fd', '_fs') -%}
+          {% set fs_data = fileset_list | selectattr('name', 'equalto', target_fs) | list -%}
+          {% if fs_data -%}
+               {{ fs_data[0].name }}:
+          {% for path in fs_data[0].paths -%}
+                 - {{ path }}
+          {% endfor -%}
+          {% else -%}
+               (No matching FileSet found)
+          {% endif -%}
+          {% endfor %}
+           ----------------------------------------------
+          ========================================
+      when: client_details | length > 0
+
+    - name: Display client report
+      debug:
+        msg: "{{ client_report.split('\n') }}"
+      when: client_details | length > 0
+
+    - name: No clients found
+      debug:
+        msg: "========================================\nNo clients found in Director configuration.\n========================================"
+      when: client_details | length == 0

@@ -1,0 +1,106 @@
+---
+- name: Enable Bacula Backup Job
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    job_name: "{{ job.config.job_name }}"
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+
+  tasks:
+    # ==========================================
+    # Validation of parameters
+    # ==========================================
+    - name: Validate job_name is provided
+      fail:
+        msg: "Job name is required."
+      when: job_name is not defined or job_name | length == 0
+
+    # ==========================================
+    # Checking the Job's existence in the config
+    # ==========================================
+    - name: Check if job exists in config
+      shell: "grep -cE 'Name\\s*=\\s*\"{{ job_name }}\"' {{ bacula_dir_conf }} || echo 0"
+      register: job_exists
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if job not found
+      fail:
+        msg: |
+          Job '{{ job_name }}' not found in Director configuration!
+          Please use 'List Jobs' action to see available jobs.
+      when: job_exists.stdout | trim | int == 0
+
+    # ==========================================
+    # Checking the current status
+    # ==========================================
+    - name: Check if job is already enabled
+      shell: |
+        awk '/Job\s*\{/{found=1} found && /Name\s*=\s*"{{ job_name }}"/{in_job=1} in_job && (!/Enabled/ || /Enabled\s*=\s*yes/){next} in_job && /Enabled\s*=\s*no/{print "DISABLED"} in_job && /^\}/{found=0; in_job=0}' {{ bacula_dir_conf }}
+      register: enabled_check
+      changed_when: false
+
+    - name: Check if Enabled = no exists
+      shell: |
+        awk '/Job\s*\{/{found=1} found && /Name\s*=\s*"{{ job_name }}"/{in_job=1} in_job && /Enabled\s*=\s*no/{print "DISABLED"; exit} in_job && /^\}/{found=0; in_job=0}' {{ bacula_dir_conf }}
+      register: disabled_check
+      changed_when: false
+
+    - name: Fail if already enabled
+      fail:
+        msg: |
+          Job '{{ job_name }}' is already enabled!
+          No changes needed.
+      when: "'DISABLED' not in disabled_check.stdout"
+
+    # ==========================================
+    # Applying the changes
+    # ==========================================
+    - name: Change Enabled = no to Enabled = yes
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?s)(Job\s*\{[^}]*Name\s*=\s*"{{ job_name }}"[^}]*?)Enabled\s*=\s*no'
+        replace: '\1Enabled = yes'
+
+    # ==========================================
+    # Validation and reload
+    # ==========================================
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Show validation error if failed
+      debug:
+        var: validate_result.stdout_lines
+      when: validate_result.rc != 0
+
+    - name: Fail if validation failed
+      fail:
+        msg: |
+          Director config validation failed!
+          Error: {{ validate_result.stdout }}
+      when: validate_result.rc != 0
+
+    - name: Reload Director
+      shell: 'echo "reload" | bconsole'
+      register: reload_result
+      failed_when: "'1000 OK' not in reload_result.stdout"
+
+    # ==========================================
+    # Finaly report
+    # ==========================================
+    - name: Show result
+      debug:
+        msg: |
+          ========================================
+          JOB ENABLED SUCCESSFULLY
+          ========================================
+          Job Name:    {{ job_name }}
+          New State:   Enabled (will run on schedule)
+          ========================================
+          The job will now run according to its schedule.
+          Use 'List Jobs' action to see when it is scheduled.
+          ========================================

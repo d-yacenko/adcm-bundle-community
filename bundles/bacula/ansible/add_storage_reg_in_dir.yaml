@@ -1,0 +1,99 @@
+---
+- name: Register new storage on Director
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+    new_storages: "{{ groups['storage.storage.add'] | default([]) }}"
+
+  tasks:
+    - name: Debug new storages
+      debug:
+        msg: "Registering storages: {{ new_storages }}"
+
+    - name: Add Storage blocks to Director
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED STORAGE {{ item }}_sd"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          Storage {
+            Name = {{ item }}_sd
+            Address = {{ hostvars[item].ansible_host }}
+            SDPort = 9103
+            Password = "{{ hostvars[item].services.director.config.bacula_dir_pw }}"
+            Device = {{ hostvars[item].services.storage.config.devices | default({'FileStorage-1': '/var/lib/bacula/volumes'}) | dict2items | map(attribute='key') | join(', ') }}
+            Media Type = File
+          }
+      loop: "{{ new_storages }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Rollback on validation failure
+      block:
+        - name: Remove Storage blocks
+          blockinfile:
+            path: "{{ bacula_dir_conf }}"
+            marker: "# {mark} ANSIBLE MANAGED STORAGE {{ item }}_sd"
+            state: absent
+          loop: "{{ new_storages }}"
+          loop_control:
+            loop_var: item
+            label: "{{ item }}"
+
+        - name: Fail with error
+          fail:
+            msg: |
+              Director config validation failed! Changes rolled back.
+              Error: {{ validate_result.stdout }} {{ validate_result.stderr }}
+      when: validate_result.rc != 0
+
+    - name: Reload Director
+      shell: 'echo "reload" | bconsole'
+      when: validate_result.rc == 0
+
+    # ==========================================
+    # Creating an initial Volume for each new Storage
+    # ==========================================
+    - name: Wait for Director to fully reload
+      pause:
+        seconds: 3
+
+    - name: Create initial volume for each new storage
+      shell: |
+        echo "label storage={{ item }}_sd volume={{ item }}_vol_1 pool=Default" | bconsole
+      loop: "{{ new_storages }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      register: label_results
+      failed_when: "'OK label' not in label_results.stdout and 'already labeled' not in label_results.stdout"
+      changed_when: "'OK label' in label_results.stdout"
+
+    - name: Show label results
+      debug:
+        msg: "{{ item.item }}: {{ 'Volume created' if 'OK label' in item.stdout else 'Volume already exists or error' }}"
+      loop: "{{ label_results.results }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item.item }}"
+
+    - name: Show summary
+      debug:
+        msg: |
+          ========================================
+          Storage registration completed!
+          ========================================
+          {% for item in new_storages %}
+          Storage: {{ item }}_sd
+          Initial Volume: {{ item }}_vol_1
+          {% endfor %}
+          ========================================

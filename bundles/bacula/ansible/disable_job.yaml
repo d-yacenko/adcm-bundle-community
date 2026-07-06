@@ -1,0 +1,111 @@
+---
+- name: Disable Bacula Backup Job
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    job_name: "{{ job.config.job_name }}"
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+
+  tasks:
+    # ==========================================
+    # Validation of parameters
+    # ==========================================
+    - name: Validate job_name is provided
+      fail:
+        msg: "Job name is required."
+      when: job_name is not defined or job_name | length == 0
+
+    # ==========================================
+    # Checking the Job's existence in the config
+    # ==========================================
+    - name: Check if job exists in config
+      shell: "grep -cE 'Name\\s*=\\s*\"{{ job_name }}\"' {{ bacula_dir_conf }} || echo 0"
+      register: job_exists
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if job not found
+      fail:
+        msg: |
+          Job '{{ job_name }}' not found in Director configuration!
+          Please use 'List Jobs' action to see available jobs.
+      when: job_exists.stdout | trim | int == 0
+
+    # ==========================================
+    # Checking the current status
+    # ==========================================
+    - name: Check if job is already disabled
+      shell: |
+        awk '/Job\s*\{/{found=1} found && /Name\s*=\s*"{{ job_name }}"/{in_job=1} in_job && /Enabled\s*=\s*no/{print "DISABLED"; exit} in_job && /^\}/{found=0; in_job=0}' {{ bacula_dir_conf }}
+      register: enabled_check
+      changed_when: false
+
+    - name: Fail if already disabled
+      fail:
+        msg: |
+          Job '{{ job_name }}' is already disabled!
+          No changes needed.
+      when: "'DISABLED' in enabled_check.stdout"
+
+    # ==========================================
+    # Applying the changes
+    # ==========================================
+    - name: Check if Enabled directive exists
+      shell: |
+        awk '/Job\s*\{/{found=1} found && /Name\s*=\s*"{{ job_name }}"/{in_job=1} in_job && /Enabled\s*=/{print "FOUND"; exit} in_job && /^\}/{found=0; in_job=0}' {{ bacula_dir_conf }}
+      register: enabled_directive_check
+      changed_when: false
+
+    - name: Add Enabled = no if directive missing
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?s)(Job\s*\{[^}]*Name\s*=\s*"{{ job_name }}"[^}]*?)(\n\s*\})'
+        replace: '\1\n  Enabled = no\2'
+      when: "'FOUND' not in enabled_directive_check.stdout"
+
+    - name: Change Enabled = yes to Enabled = no
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?s)(Job\s*\{[^}]*Name\s*=\s*"{{ job_name }}"[^}]*?)Enabled\s*=\s*yes'
+        replace: '\1Enabled = no'
+      when: "'FOUND' in enabled_directive_check.stdout"
+
+    # ==========================================
+    # Validation and reload
+    # ==========================================
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Show validation error if failed
+      debug:
+        var: validate_result.stdout_lines
+      when: validate_result.rc != 0
+
+    - name: Fail if validation failed
+      fail:
+        msg: |
+          Director config validation failed!
+          Error: {{ validate_result.stdout }}
+      when: validate_result.rc != 0
+
+    - name: Reload Director
+      shell: 'echo "reload" | bconsole'
+      register: reload_result
+      failed_when: "'1000 OK' not in reload_result.stdout"
+
+    # ==========================================
+    # Finaly report
+    # ==========================================
+    - name: Show result
+      debug:
+        msg: |
+          ========================================
+          JOB DISABLED SUCCESSFULLY
+          ========================================
+          Job Name:    {{ job_name }}
+          New State:   Disabled (will NOT run on schedule)
+          ========================================

@@ -1,0 +1,122 @@
+---
+- name: Install PostgreSQL for Bacula catalog
+  hosts: postgresql.postgresql
+  become: yes
+  vars:
+    postgresql_version: 14
+    postgresql_conf_dir: "/etc/postgresql/{{ postgresql_version }}/main"
+    pg_host: "{{ inventory_hostname }}"
+    pg_user: "{{ hostvars[pg_host]['services']['postgresql']['config']['postgresql_user'] }}"
+    pg_password: "{{ hostvars[pg_host]['services']['postgresql']['config']['postgresql_password'] }}"
+    pg_dbname: "{{ hostvars[pg_host]['services']['postgresql']['config']['postgresql_dbname'] }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install PostgreSQL and required packages
+      apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+          - python3-psycopg2
+        state: present
+
+    - name: Install bacula-director-pgsql (to get schema initialization script)
+      apt:
+        name: bacula-director-pgsql
+        state: present
+      ignore_errors: yes
+
+    - name: Ensure PostgreSQL is running
+      service:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Create or update Bacula database user with password
+      shell: |
+        sudo -u postgres psql -c "ALTER USER {{ pg_user }} WITH PASSWORD '{{ pg_password }}';"
+      args:
+        executable: /bin/bash
+      register: update_user_result
+      changed_when: "'ALTER ROLE' in update_user_result.stdout"
+      failed_when: update_user_result.rc != 0
+
+    - name: Create Bacula database (if not exists)
+      shell: |
+        sudo -u postgres psql -c "CREATE DATABASE {{ pg_dbname }} OWNER {{ pg_user }};"
+      args:
+        executable: /bin/bash
+      register: create_db_result
+      changed_when: "'CREATE DATABASE' in create_db_result.stdout or 'already exists' not in create_db_result.stderr"
+      failed_when: create_db_result.rc != 0 and 'already exists' not in create_db_result.stderr
+
+    - name: Allow remote connections in pg_hba.conf (add to end of file)
+      blockinfile:
+        path: "{{ postgresql_conf_dir }}/pg_hba.conf"
+        block: |
+          # Bacula remote access
+          host    {{ pg_dbname }}    {{ pg_user }}    0.0.0.0/0    md5
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - bacula"
+      notify: restart postgresql
+
+    - name: Configure PostgreSQL to listen on all interfaces
+      lineinfile:
+        path: "{{ postgresql_conf_dir }}/postgresql.conf"
+        regexp: "^#?listen_addresses"
+        line: "listen_addresses = '*'"
+      notify: restart postgresql
+
+    - name: Flush handlers to restart PostgreSQL
+      meta: flush_handlers
+
+    - name: Initialize Bacula database schema if not present
+      shell: |
+        if sudo -u postgres psql -tAc "SELECT 1 FROM pg_tables WHERE tablename='version' AND schemaname='public'" {{ pg_dbname }} | grep -q 1; then
+          echo "Schema already exists."
+        else
+          echo "Schema not found, initializing..."
+          SCRIPT=""
+          if [ -f /usr/share/bacula-director/scripts/create_postgresql.sql ]; then
+            SCRIPT="/usr/share/bacula-director/scripts/create_postgresql.sql"
+          elif [ -f /usr/share/dbconfig-common/data/bacula-director-pgsql/install/postgresql ]; then
+            SCRIPT="/usr/share/dbconfig-common/data/bacula-director-pgsql/install/postgresql"
+          elif [ -f /usr/share/doc/bacula-director-pgsql/examples/create_postgresql.sql ]; then
+            SCRIPT="/usr/share/doc/bacula-director-pgsql/examples/create_postgresql.sql"
+          else
+            echo "ERROR: Bacula schema initialization script not found."
+            exit 1
+          fi
+          echo "Using script: $SCRIPT"
+          sudo -u postgres psql -d {{ pg_dbname }} -f "$SCRIPT"
+        fi
+      args:
+        executable: /bin/bash
+      register: init_db_result
+      changed_when: "'Schema not found' in init_db_result.stdout"
+      ignore_errors: yes
+
+    - name: Display initialization result
+      debug:
+        var: init_db_result.stdout_lines
+      when: init_db_result is defined and init_db_result.stdout is defined
+
+    # ==========================================
+    # Changing the state of a component in ADCM
+    # ==========================================
+    - name: Set postgresql service state to installed
+      adcm_state:
+        type: "service"
+        service_name: "postgresql"
+        state: "installed"
+      delegate_to: localhost
+      connection: local
+
+  handlers:
+    - name: restart postgresql
+      service:
+        name: postgresql
+        state: restarted

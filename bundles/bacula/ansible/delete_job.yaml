@@ -1,0 +1,221 @@
+---
+- name: Delete Bacula Job from Catalog and Config
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    job_name: "{{ job.config.job_name }}"
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+
+  tasks:
+
+    # ==========================================
+    # Checking if the last Job is being deleted
+    # ==========================================
+    - name: Count total Job blocks in config
+      shell: "grep -cE '^\\s*Job\\s*\\{' {{ bacula_dir_conf }} || echo 0"
+      register: total_jobs_before
+      changed_when: false
+
+    - name: Check if this job exists in config
+      shell: "grep -cE 'Name\\s*=\\s*\"{{ job_name }}\"' {{ bacula_dir_conf }} || echo 0"
+      register: job_exists_in_config
+      changed_when: false
+
+    - name: Fail if this is the last job in config
+      fail:
+        msg: |
+          Cannot delete job '{{ job_name }}'!
+
+          This is the LAST job in the Director configuration.
+          Bacula Director requires at least one Job to function.
+          Without any Job, Director will fail to start with error:
+            "No Job records defined in bacula-dir.conf"
+
+          Current Job blocks in config: {{ total_jobs_before.stdout | trim }}
+
+          To delete this job:
+          1. Create at least one new backup job using 'Create Backup Job' action
+          2. Then delete this job
+      when:
+        - total_jobs_before.stdout | trim | int <= 1
+        - job_exists_in_config.stdout | trim | int > 0
+
+    # ==========================================
+    # Searching for entries in a catalog (PostgreSQL)
+    # ==========================================
+    - name: Get all jobs and filter by name
+      shell: |
+        echo "list jobs" | bconsole 2>&1 | grep -E "\\|.*{{ job_name }}.*\\|"
+      register: filtered_jobs
+      changed_when: false
+      failed_when: false
+
+    - name: Parse job IDs from filtered output
+      set_fact:
+        job_ids: "{{ filtered_jobs.stdout_lines | select('match', '^\\|\\s+\\d+') | map('regex_replace', '^\\|\\s+(\\d+).*', '\\1') | list }}"
+
+    - name: Show found catalog entries
+      debug:
+        msg: "Found {{ job_ids | length }} execution record(s) in catalog for '{{ job_name }}': {{ job_ids }}"
+      when: job_ids | length > 0
+
+    - name: Warn if no catalog entries found
+      debug:
+        msg: "No execution history found in catalog for '{{ job_name }}'. Proceeding to remove config definition."
+      when: job_ids | length == 0
+
+    # ==========================================
+    # Processing of running Jobs
+    # ==========================================
+    - name: Check status of each job
+      shell: |
+        echo "list jobid={{ item }}" | bconsole 2>&1
+      loop: "{{ job_ids }}"
+      loop_control:
+        loop_var: item
+        label: "Job {{ item }}"
+      register: job_statuses
+      changed_when: false
+      failed_when: false
+      when: job_ids | length > 0
+
+    - name: Separate running and non-running jobs
+      set_fact:
+        running_jobs: "{{ job_statuses.results | selectattr('stdout', 'search', '\\|\\s+R\\s+\\|') | map(attribute='item') | list }}"
+      when: job_ids | length > 0
+
+    - name: Cancel running jobs before deletion
+      shell: |
+        echo "cancel jobid={{ item }}" | bconsole
+      loop: "{{ running_jobs | default([]) }}"
+      loop_control:
+        loop_var: item
+        label: "Canceling Job {{ item }}"
+      register: cancel_results
+      failed_when: false
+      when: running_jobs is defined and running_jobs | length > 0
+
+    # ==========================================
+    # Delete jobs from catalog
+    # ==========================================
+    - name: Delete jobs from catalog
+      shell: |
+        echo "delete jobid={{ item }}" | bconsole
+      loop: "{{ job_ids }}"
+      loop_control:
+        loop_var: item
+        label: "Deleting Job {{ item }} from catalog"
+      register: delete_results
+      failed_when: false
+      when: job_ids | length > 0
+
+    # ==========================================
+    # Remove Job block with this name from config
+    # ==========================================
+    - name: Remove Job block with this name from config
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?s)Job\s*\{[^}]*Name\s*=\s*"{{ job_name }}"[^}]*\}\s*\n'
+        replace: ''
+      register: job_block_removed
+
+    - name: Remove Schedule block named Schedule_{{ job_name }}
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?s)Schedule\s*\{[^}]*Name\s*=\s*"Schedule_{{ job_name }}"[^}]*\}\s*\n'
+        replace: ''
+      register: schedule_block_1
+
+    - name: Remove Schedule block named {{ job_name }}_Schedule
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?s)Schedule\s*\{[^}]*Name\s*=\s*"{{ job_name }}_Schedule"[^}]*\}\s*\n'
+        replace: ''
+      register: schedule_block_2
+
+    - name: Remove Schedule block named {{ job_name }}
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?s)Schedule\s*\{[^}]*Name\s*=\s*"{{ job_name }}"[^}]*\}\s*\n'
+        replace: ''
+      register: schedule_block_3
+
+    - name: Remove orphaned ANSIBLE MANAGED markers for job
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?m)^# (BEGIN|END) ANSIBLE MANAGED (JOB|SCHEDULE) {{ job_name }}.*\n'
+        replace: ''
+      register: markers_removed
+
+    - name: Remove orphaned ANSIBLE MANAGED markers for Schedule_{{ job_name }}
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?m)^# (BEGIN|END) ANSIBLE MANAGED SCHEDULE Schedule_{{ job_name }}.*\n'
+        replace: ''
+      register: markers_schedule_1
+
+    - name: Remove orphaned ANSIBLE MANAGED markers for {{ job_name }}_Schedule
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '(?m)^# (BEGIN|END) ANSIBLE MANAGED SCHEDULE {{ job_name }}_Schedule.*\n'
+        replace: ''
+      register: markers_schedule_2
+
+    - name: Clean up empty lines left after block removal
+      replace:
+        path: "{{ bacula_dir_conf }}"
+        regexp: '\n{3,}'
+        replace: '\n\n'
+      register: cleanup_empty_lines
+
+    # ==========================================
+    # Check and reload
+    # ==========================================
+    - name: Check if any Job blocks remain in config
+      shell: "grep -cE '^\\s*Job\\s*\\{' {{ bacula_dir_conf }} || echo 0"
+      register: remaining_jobs
+      changed_when: false
+
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Show validation output if failed
+      debug:
+        var: validate_result.stdout_lines
+      when: validate_result.rc != 0
+
+    - name: Reload Director
+      shell: 'echo "reload" | bconsole'
+      register: reload_result
+      failed_when: "'1000 OK' not in reload_result.stdout"
+      when: validate_result.rc == 0
+
+    # ==========================================
+    # Final report
+    # ==========================================
+    - name: Show removal summary
+      debug:
+        msg: |
+          ========================================
+          JOB REMOVAL COMPLETED
+          ========================================
+          Job Name: '{{ job_name }}'
+
+          Catalog:
+            Execution records removed:  {{ job_ids | length }}
+
+          Config:
+            Job block removed:          {{ 'Yes' if job_block_removed.changed else 'Not found' }}
+            Schedule block removed:     {{ 'Yes' if schedule_block_1.changed or schedule_block_2.changed or schedule_block_3.changed else 'Not found' }}
+            Orphaned markers cleaned:   {{ 'Yes' if markers_removed.changed or markers_schedule_1.changed or markers_schedule_2.changed else 'No' }}
+
+          Director:
+            Job blocks before deletion: {{ total_jobs_before.stdout | trim }}
+            Remaining Job blocks:       {{ remaining_jobs.stdout | trim }}
+            Config validation:          {{ 'OK' if validate_result.rc == 0 else 'FAILED' }}
+            Reloaded:                   {{ 'Yes' if reload_result is defined and reload_result is not skipped else 'No' }}
+          ========================================

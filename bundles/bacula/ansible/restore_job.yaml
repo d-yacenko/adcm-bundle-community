@@ -1,0 +1,201 @@
+---
+- name: Restore Bacula Backup Job
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    job_id: "{{ job.config.job_id }}"
+    client_host: "{{ job.config.client_host }}"
+    restore_path: "{{ job.config.restore_path }}"
+    client_ip: "{{ hostvars[client_host].ansible_host }}"
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+    first_storage: "{{ groups['storage.storage'][0] }}"
+
+  tasks:
+    # ==========================================
+    # Validation of parameters
+    # ==========================================
+    - name: Validate job_id is provided
+      fail:
+        msg: "Job ID is required. Please specify a valid job ID."
+      when: job_id is not defined or job_id | string | length == 0
+
+    - name: Validate client_host is provided
+      fail:
+        msg: "Client host is required. Please select a target client for restoration."
+      when: client_host is not defined or client_host | length == 0
+
+    - name: Validate restore_path is provided
+      fail:
+        msg: "Restore path is required. Please specify a directory path for restoration."
+      when: restore_path is not defined or restore_path | length == 0
+
+    # ==========================================
+    # Checking the existence and type of Job
+    # ==========================================
+    - name: Get job information
+      shell: 'echo "list jobid={{ job_id }}" | bconsole 2>&1'
+      register: job_info
+      changed_when: false
+      failed_when: false
+
+    - name: Check if job exists
+      fail:
+        msg: |
+          Job ID {{ job_id }} not found in catalog!
+          Please use 'List Jobs' action to find valid job IDs.
+          Output: {{ job_info.stdout }}
+      when: "'No results' in job_info.stdout or job_info.rc != 0"
+
+    - name: Extract job info line from list output
+      set_fact:
+        job_info_line: "{{ job_info.stdout_lines | select('search', '\\|\\s+' + job_id | string + '\\s+\\|') | list | first | default('') }}"
+
+    - name: Extract job type from info line
+      set_fact:
+        job_type: "{{ job_info_line.split('|')[4] | trim if job_info_line | length > 0 else '' }}"
+
+    - name: Show job information
+      debug:
+        msg: |
+          Job ID: {{ job_id }}
+          Job Type: {{ job_type | default('unknown') }}
+          Client: {{ client_host }}
+          Restore Path: {{ restore_path }}
+
+    - name: Check if job is a Backup job
+      fail:
+        msg: |
+          Job ID {{ job_id }} is not a Backup job!
+          Job type: {{ job_type | default('unknown') }}
+
+          Only Backup jobs (type 'B') can be used as source for restore.
+          Please use 'List Jobs' action to find a valid Backup job.
+      when: job_type != 'B'
+
+    # ==========================================
+    # Creating a recovery directory on the client
+    # ==========================================
+    - name: Create restore directory on client
+      file:
+        path: "{{ restore_path }}"
+        state: directory
+        mode: '0755'
+      delegate_to: "{{ client_host }}"
+
+    # ==========================================
+    # Creating a Temporary Restore Job
+    # ==========================================
+    - name: Create temporary Restore Job
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED RESTORE JOB"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          Job {
+            Name = "Restore_Job"
+            Type = Restore
+            Client = {{ client_host }}-fd
+            FileSet = "{{ client_host }}_fs"
+            Storage = {{ first_storage }}_sd
+            Pool = Default
+            Messages = Standard
+            Priority = 10
+            Where = {{ restore_path }}
+          }
+
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if config is invalid
+      fail:
+        msg: |
+          Director config validation failed after creating Restore Job!
+          Error: {{ validate_result.stdout }} {{ validate_result.stderr }}
+      when: validate_result.rc != 0
+
+    - name: Reload Director
+      shell: 'echo "reload" | bconsole'
+      register: reload_result
+      failed_when: "'1000 OK' not in reload_result.stdout"
+
+    - name: Wait for Director to reload
+      pause:
+        seconds: 2
+
+    # ==========================================
+    # Starting the recovery process (fire-and-forget)
+    # ==========================================
+    - name: Execute restore command in single line
+      shell: 'echo "restore jobid={{ job_id }} client={{ client_host }}-fd fileset={{ client_host }}_fs storage={{ first_storage }}_sd where={{ restore_path }} all done yes" | bconsole 2>&1'
+      register: restore_result
+      changed_when: false
+      failed_when: false
+
+    - name: Extract all JobId occurrences from output
+      set_fact:
+        all_job_ids: "{{ restore_result.stdout | regex_findall('JobId=(\\d+)') | default([]) }}"
+
+    - name: Set restore_job_id to last occurrence or empty
+      set_fact:
+        restore_job_id: "{{ all_job_ids | last | default('') }}"
+
+    - name: Fail if restore job was not created
+      fail:
+        msg: |
+          Failed to initiate restore job!
+          Output: {{ restore_result.stdout }}
+      when: restore_job_id | length == 0
+
+    # ==========================================
+    # Deleting a Temporary Restore Job
+    # ==========================================
+    - name: Remove temporary Restore Job from config
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED RESTORE JOB"
+        state: absent
+
+    - name: Validate Director configuration after cleanup
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: cleanup_validate
+      changed_when: false
+      failed_when: false
+
+    - name: Reload Director after cleanup
+      shell: 'echo "reload" | bconsole'
+      when: cleanup_validate.rc == 0
+
+    # ==========================================
+    # Final report
+    # ==========================================
+    - name: Show restore result
+      debug:
+        msg: |
+          ========================================
+          RESTORE JOB STARTED
+          ========================================
+          Source Job ID:      {{ job_id }}
+          Restore Job ID:     {{ restore_job_id }}
+          Client:             {{ client_host }} ({{ client_ip }})
+          Restore Path:       {{ restore_path }}
+          ========================================
+
+          The restore job has been queued and is running
+          in the background on the Director.
+
+          To check the status, use the "List Jobs" action
+          and look for JobId {{ restore_job_id }}.
+
+          Possible statuses:
+            R  - Running
+            T  - Terminated (completed successfully)
+            f  - Fatal error
+            A  - Canceled
+
+          After completion, restored files will be available at:
+          {{ client_host }}:{{ restore_path }}
+          ========================================
