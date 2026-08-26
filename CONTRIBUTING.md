@@ -295,7 +295,7 @@ git push origin v1.0.0
 
 ## 🐛 Отчеты об ошибках
 
-При обнаружении ошибки откройте Pull Request с исправлением или сообщите о проблеме в [Telegram](https://t.me/adcm_community). Для PR укажите:
+При обнаружении ошибки откройте Pull Request с исправлением или сообщите о проблеме в [Telegram](https://t.me/adcm_bundle_community). Для PR укажите:
 
 - Название и версия бандла
 - Версия ADCM
@@ -306,11 +306,11 @@ git push origin v1.0.0
 
 ## 💡 Предложения по улучшению
 
-Предложения оформляйте Pull Request’ом или направляйте в [Telegram](https://t.me/adcm_community).
+Предложения оформляйте Pull Request’ом или направляйте в [Telegram](https://t.me/adcm_bundle_community).
 
 ## 📞 Связь с сообществом
 
-- 💬 Telegram: [@adcm_community](https://t.me/adcm_community)
+- 💬 Telegram: [@adcm_bundle_community](https://t.me/adcm_bundle_community)
 - 💬 Slack: [adcm-community.slack.com](https://adcm-community.slack.com)
 - 📧 Email: community@adcm-bundle.org
 
@@ -320,4 +320,4 @@ git push origin v1.0.0
 
 ---
 
-**Вопросы?** Напишите в [Telegram](https://t.me/adcm_community) или откройте Pull Request.
+**Вопросы?** Напишите в [Telegram](https://t.me/adcm_bundle_community) или откройте Pull Request.
