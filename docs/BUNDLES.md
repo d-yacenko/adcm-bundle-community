@@ -8,7 +8,7 @@
 | JupyterHub | 1.86p3 | >= 2.6.0 | [`adcm-jupyterhub-1.86p3.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-jupyterhub-1.86p3.tgz) |
 | Apache Superset | 1.0.1 | >= 2.6.0 | [`adcm-superset-1.0.1.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-superset-1.0.1.tgz) |
 | pgAdmin 4 | 1.0.5 | >= 2.6.0 | [`adcm-pgadmin4-web-1.0.5.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-pgadmin4-web-1.0.5.tgz) |
-| WebSSH | 1.0.5 | >= 2.6.0 | [`adcm-webssh-1.0.5.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-webssh-1.0.5.tgz) |
+| WebSSH | 1.0.6 | >= 2.6.0 | [`adcm-webssh-1.0.6.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-webssh-1.0.6.tgz) |
 
 ## Проверка целостности
 

@@ -34,6 +34,12 @@
         executable: pip3
       ignore_errors: yes
 
+    - name: Remove WebSSH service account
+      user:
+        name: webssh
+        state: absent
+        remove: true
+
     - name: Uninstall ADCM status checker mapping for WebSSH
       include_role:
         name: status_checker
@@ -43,5 +49,4 @@
         service_name: "{{ webssh_service }}"
         component_id: "{{ services.webssh.TTY.component_id }}"
         host_id: "{{ adcm_hostid }}"
-
 

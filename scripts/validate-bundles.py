@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -11,6 +12,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLES = ROOT / "bundles"
+SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+VERSION_PATTERN = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$")
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 def mappings(value: Any) -> Iterator[dict]:
@@ -25,6 +29,15 @@ def mappings(value: Any) -> Iterator[dict]:
 
 def validate_bundle(bundle_dir: Path) -> list[str]:
     errors: list[str] = []
+    if not SLUG_PATTERN.fullmatch(bundle_dir.name):
+        errors.append(f"{bundle_dir.name}: unsafe bundle directory name")
+
+    for path in bundle_dir.rglob("*"):
+        if path.is_symlink():
+            errors.append(f"{bundle_dir.name}: symbolic links are not allowed: {path.relative_to(bundle_dir)}")
+        elif path.is_file() and path.stat().st_size > MAX_FILE_SIZE:
+            errors.append(f"{bundle_dir.name}: file exceeds 10 MiB: {path.relative_to(bundle_dir)}")
+
     config_path = bundle_dir / "config.yaml"
     if not config_path.is_file():
         return [f"{bundle_dir.name}: config.yaml is missing"]
@@ -34,6 +47,9 @@ def validate_bundle(bundle_dir: Path) -> list[str]:
     except yaml.YAMLError as error:
         return [f"{bundle_dir.name}: invalid config.yaml: {error}"]
 
+    if any(not isinstance(document, list) for document in documents if document is not None):
+        return errors + [f"{bundle_dir.name}: every YAML document in config.yaml must be a list"]
+
     objects = [item for document in documents if document for item in document]
     clusters = [item for item in objects if isinstance(item, dict) and item.get("type") == "cluster"]
     if len(clusters) != 1:
@@ -42,6 +58,9 @@ def validate_bundle(bundle_dir: Path) -> list[str]:
         for field in ("name", "version", "adcm_min_version"):
             if clusters[0].get(field) in (None, ""):
                 errors.append(f"{bundle_dir.name}: cluster field '{field}' is required")
+        version = str(clusters[0].get("version", ""))
+        if version and not VERSION_PATTERN.fullmatch(version):
+            errors.append(f"{bundle_dir.name}: unsafe cluster version '{version}'")
 
     if not any((bundle_dir / name).is_file() for name in ("README.md", "readme.md")):
         errors.append(f"{bundle_dir.name}: README.md is missing")
@@ -50,8 +69,15 @@ def validate_bundle(bundle_dir: Path) -> list[str]:
 
     for item in mappings(objects):
         script = item.get("script")
-        if isinstance(script, str) and not (bundle_dir / script).is_file():
-            errors.append(f"{bundle_dir.name}: referenced script does not exist: {script}")
+        if isinstance(script, str):
+            script_path = bundle_dir / script
+            try:
+                script_path.resolve().relative_to(bundle_dir.resolve())
+            except ValueError:
+                errors.append(f"{bundle_dir.name}: referenced script escapes bundle directory: {script}")
+            else:
+                if not script_path.is_file() or script_path.is_symlink():
+                    errors.append(f"{bundle_dir.name}: referenced script does not exist: {script}")
 
     for yaml_path in sorted(bundle_dir.rglob("*.yml")) + sorted(bundle_dir.rglob("*.yaml")):
         try:
