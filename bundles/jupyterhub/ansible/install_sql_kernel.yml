@@ -153,7 +153,6 @@
         state: directory
         mode: "0755"
         owner: admin
-        group: user
 
     - name: Copy sample notebook to admin home directory
       template:
@@ -161,5 +160,3 @@
         dest: "{{ admin_home }}/sample_sql.ipynb"
         mode: "0644"
         owner: admin
-        group: user
-

@@ -80,6 +80,10 @@ done
   sha256sum ./*.tgz > SHA256SUMS
 )
 
+python3 "${ROOT_DIR}/scripts/build-catalog.py" \
+  --bundles-dir "${BUNDLES_DIR}" \
+  --dist-dir "${DIST_DIR}"
+
 echo
 echo "Artifacts:"
-ls -lh "${DIST_DIR}"/*.tgz "${DIST_DIR}"/SHA256SUMS
+ls -lh "${DIST_DIR}"/*.tgz "${DIST_DIR}"/SHA256SUMS "${DIST_DIR}"/catalog.json

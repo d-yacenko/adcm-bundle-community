@@ -1,0 +1,43 @@
+name: Validate bundles
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate bundles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install validation dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Lint YAML
+        run: yamllint -c .yamllint.yml bundles examples
+
+      - name: Validate bundle contract
+        run: python scripts/validate-bundles.py
+
+      - name: Build release artifacts
+        run: bash scripts/build-bundles.sh
+
+      - name: Upload build preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: adcm-bundles
+          path: dist/
+          retention-days: 7

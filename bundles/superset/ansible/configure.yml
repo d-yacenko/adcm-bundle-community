@@ -1,0 +1,31 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    superset_version: "{{ services.superset.config.superset_version }}"
+    admin_password: "{{ services.superset.config.admin_password }}"
+    compose_file: /opt/superset/docker-compose-image-tag.yml
+    compose_override: /opt/superset/docker-compose.psycopg.override.yml
+  tasks:
+    - name: Run DB migrations (best-effort)
+      shell: |
+        TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T superset bash -lc 'superset db upgrade'
+      args:
+        executable: /bin/bash
+      ignore_errors: yes
+
+    - name: Initialize Superset metadata (best-effort)
+      shell: |
+        TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T superset bash -lc 'superset init'
+      args:
+        executable: /bin/bash
+      ignore_errors: yes
+
+    - name: Reset admin password
+      shell: |
+        TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T \
+          superset bash -lc 'superset fab reset-password --username admin --password "{{ admin_password }}"'
+      args:
+        executable: /bin/bash
+      no_log: true

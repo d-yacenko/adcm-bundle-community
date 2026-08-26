@@ -167,6 +167,14 @@ Apache 2.0
 
 Перед созданием Pull Request протестируйте бандл:
 
+0. **Автоматическая локальная проверка**
+   ```bash
+   python3 -m pip install -r requirements-dev.txt
+   yamllint -c .yamllint.yml bundles examples
+   python3 scripts/validate-bundles.py
+   bash scripts/build-bundles.sh
+   ```
+
 1. **Загрузка в ADCM**
    ```bash
    # Соберите релизный архив локально
@@ -238,6 +246,7 @@ test: add integration tests for HDFS
    - [ ] Бандл загружается в ADCM
    - [ ] Actions выполняются успешно
    - [ ] Сервис работает корректно
+   - [ ] CI `Validate bundles` завершился успешно
    - [ ] Документация актуальна
    
    ## Чеклист

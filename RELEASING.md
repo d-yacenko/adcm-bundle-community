@@ -1,50 +1,38 @@
-# Релизы ADCM бандлов
+# Релизы ADCM-бандлов
 
-Этот репозиторий хранит исходники бандлов в `bundles/*`.
-Готовые архивы `*.tgz` публикуются как assets в GitHub Releases.
+Репозиторий хранит исходники в `bundles/*`. Готовые архивы публикуются только как GitHub Release assets и не коммитятся в Git.
 
-## Как устроен GitHub Releases
+Каждый release содержит:
 
-GitHub Release привязан к Git-тегу и содержит:
-- заголовок релиза (`v1.0.0`, `v2026.02.16` и т.д.);
-- заметки о релизе (release notes);
-- бинарные артефакты (в нашем случае `adcm-*.tgz` и `SHA256SUMS`).
+- `adcm-<bundle>-<version>.tgz` для каждого каталога в `bundles/`;
+- `SHA256SUMS`;
+- `catalog.json` с версиями, checksum и прямыми download URL.
 
-В этом репозитории публикация автоматизирована workflow:
-- файл: `.github/workflows/release.yml`;
-- триггер: push тега `v*`;
-- шаги: сборка `scripts/build-bundles.sh` -> загрузка файлов в Release.
-
-## Локальная сборка артефактов
+## Предварительная проверка
 
 ```bash
+python3 -m pip install -r requirements-dev.txt
+yamllint -c .yamllint.yml bundles examples
+python3 scripts/validate-bundles.py
 bash scripts/build-bundles.sh
-ls -lh dist/
 ```
 
-Скрипт создаёт:
-- `dist/adcm-jupyterhub-<version>.tgz`
-- `dist/adcm-pgadmin4-web-<version>.tgz`
-- `dist/adcm-webssh-<version>.tgz`
-- `dist/SHA256SUMS`
+## Выпуск
 
-## Как выпустить релиз
-
-1. Убедитесь, что изменения в `bundles/*` и документации готовы.
-2. Обновите `CHANGELOG.md`.
-3. Создайте и отправьте тег:
+Release workflow запускается тегом `v*`:
 
 ```bash
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
+git switch main
+git pull --ff-only
+git tag -a v2026.08.26 -m "ADCM community bundles 2026.08.26"
+git push origin v2026.08.26
 ```
 
-4. GitHub Actions автоматически создаст Release и прикрепит артефакты.
-5. Проверьте страницу `Releases` и скачивание `*.tgz`.
+Workflow повторно валидирует исходники, собирает все архивы и создаёт GitHub Release. После завершения необходимо проверить:
 
-## Скачивание для пользователей ADCM
+1. workflow `Release Bundles` завершился успешно;
+2. Release не является draft или prerelease;
+3. все `.tgz`, `SHA256SUMS` и `catalog.json` доступны без авторизации;
+4. прямые ссылки с лендинга возвращают HTTP 200.
 
-Пользователи скачивают готовые архивы со страницы:
-- `https://github.com/<owner>/<repo>/releases/latest`
-
-и загружают нужный `*.tgz` в ADCM UI/API.
+Версия каталога в теге и версии отдельных бандлов независимы: версия каждого `.tgz` берётся из cluster prototype в его `config.yaml`.

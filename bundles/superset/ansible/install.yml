@@ -1,0 +1,289 @@
+---
+- hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    superset_version: "{{ services.superset.config.superset_version }}"
+    admin_password: "{{ services.superset.config.admin_password }}"
+    admin_email: "admin@{{ inventory_hostname }}"
+    compose_file: /opt/superset/docker-compose-image-tag.yml
+    compose_override: /opt/superset/docker-compose.psycopg.override.yml
+    image_tag: "local/superset:{{ services.superset.config.superset_version }}-pg"
+  tasks:
+    - name: Wait until apt/dpkg locks are free
+      shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+              fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+              fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
+          sleep 5
+        done
+      changed_when: false
+
+    - name: Ensure prerequisites are present
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - git
+          - unzip
+        state: present
+        update_cache: yes
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Add Docker GPG key (keyring dearmored)
+      shell: |
+        set -euo pipefail
+        install -m 0755 -d /etc/apt/keyrings
+        if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        fi
+        chmod a+r /etc/apt/keyrings/docker.gpg
+      args:
+        executable: /bin/bash
+
+    - name: Add Docker APT repository
+      shell: |
+        . /etc/os-release
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" \
+          > /etc/apt/sources.list.d/docker.list
+      args:
+        executable: /bin/bash
+
+    - name: Install Docker engine and Compose
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Enable and start Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Clone Superset repository (tag)
+      git:
+        repo: https://github.com/apache/superset
+        dest: /opt/superset
+        version: "{{ superset_version }}"
+        depth: 1
+        force: yes
+
+    - name: Prepare Superset local env file
+      copy:
+        dest: /opt/superset/docker/.env-local
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          SUPERSET_ADMIN_USERNAME=admin
+          SUPERSET_ADMIN_FIRSTNAME=Admin
+          SUPERSET_ADMIN_LASTNAME=User
+          SUPERSET_ADMIN_EMAIL={{ admin_email }}
+          SUPERSET_ADMIN_PASSWORD={{ admin_password }}
+          SUPERSET_SECRET_KEY={{ (inventory_hostname + '|' + admin_password + '|superset') | hash('sha256') }}
+      no_log: true
+
+    - name: Write Dockerfile with psycopg2
+      copy:
+        dest: /opt/superset/Dockerfile.psycopg
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          FROM apachesuperset.docker.scarf.sh/apache/superset:{{ superset_version }}
+          USER root
+          RUN python -m pip install --no-cache-dir psycopg2-binary==2.9.9
+          USER superset
+
+    - name: Write Compose override to use local image
+      copy:
+        dest: /opt/superset/docker-compose.psycopg.override.yml
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          services:
+            superset:
+              image: {{ image_tag }}
+            superset-init:
+              image: {{ image_tag }}
+            superset-worker:
+              image: {{ image_tag }}
+            superset-worker-beat:
+              image: {{ image_tag }}
+
+    - name: Pull required images with retries
+      shell: |
+        set -euo pipefail
+        for img in postgres:15 redis:7 apachesuperset.docker.scarf.sh/apache/superset:{{ superset_version }}; do
+          ok=0
+          for i in $(seq 1 6); do
+            if /usr/bin/docker pull "$img"; then
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          if [ "$ok" != "1" ]; then
+            echo "Failed to pull image $img" >&2
+            exit 1
+          fi
+        done
+      args:
+        executable: /bin/bash
+
+    - name: Build local Superset image with psycopg2
+      shell: |
+        /usr/bin/docker build -t {{ image_tag }} -f /opt/superset/Dockerfile.psycopg /opt/superset
+      args:
+        executable: /bin/bash
+
+    - name: Install systemd unit for Superset
+      copy:
+        dest: /etc/systemd/system/superset.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Apache Superset with Docker Compose
+          Documentation=https://superset.apache.org/
+          After=docker.service
+          Requires=docker.service
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          WorkingDirectory=/opt/superset
+          Environment=TAG={{ superset_version }}
+          ExecStart=/usr/bin/docker compose -f /opt/superset/docker-compose-image-tag.yml -f /opt/superset/docker-compose.psycopg.override.yml up -d
+          ExecStop=/usr/bin/docker compose -f /opt/superset/docker-compose-image-tag.yml -f /opt/superset/docker-compose.psycopg.override.yml down
+          TimeoutStartSec=0
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Superset service
+      systemd:
+        name: superset
+        state: started
+        enabled: yes
+
+    - name: Wait for Postgres to be ready
+      shell: |
+        for i in $(seq 1 30); do
+          if /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T db pg_isready -U superset >/dev/null 2>&1; then
+            exit 0
+          fi
+          sleep 5
+        done
+        exit 1
+      args:
+        executable: /bin/bash
+
+    - name: Run DB migrations
+      shell: |
+        TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T superset bash -lc 'superset db upgrade'
+      args:
+        executable: /bin/bash
+      register: db_upgrade
+      retries: 12
+      delay: 10
+      until: db_upgrade.rc == 0
+
+    - name: Initialize Superset metadata
+      shell: |
+        TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T superset bash -lc 'superset init'
+      args:
+        executable: /bin/bash
+      register: superset_init
+      retries: 12
+      delay: 10
+      until: superset_init.rc == 0
+
+    - name: Ensure admin user exists
+      shell: |
+        TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T \
+          superset bash -lc 'superset fab create-admin --username admin --firstname Admin --lastname User --email "{{ admin_email }}" --password "{{ admin_password }}"' || true
+      args:
+        executable: /bin/bash
+      no_log: true
+
+    - name: Reset admin password
+      shell: |
+        TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T \
+          superset bash -lc 'superset fab reset-password --username admin --password "{{ admin_password }}"'
+      args:
+        executable: /bin/bash
+      no_log: true
+      register: reset_pass
+      retries: 12
+      delay: 10
+      until: reset_pass.rc == 0
+
+    - name: Verify admin login via API
+      shell: |
+        curl -sS -m 10 -X POST http://127.0.0.1:8088/api/v1/security/login \
+          -H 'Content-Type: application/json' \
+          -d '{"username":"admin","password":"{{ admin_password }}","provider":"db","refresh":true}' | grep -q 'access_token'
+      args:
+        executable: /bin/bash
+      no_log: true
+      register: login_check
+      retries: 12
+      delay: 10
+      until: login_check.rc == 0
+
+    - name: Load Superset examples (skip if already present)
+      shell: |
+        set -e
+        dashboards_cnt=$(TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T \
+          db psql -U superset -d superset -Atc 'select count(*) from dashboards;' 2>/dev/null | tr -d '\r' | tail -n 1 || true)
+        charts_cnt=$(TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T \
+          db psql -U superset -d superset -Atc 'select count(*) from slices;' 2>/dev/null | tr -d '\r' | tail -n 1 || true)
+        if echo "$dashboards_cnt" | grep -Eq '^[0-9]+$' && echo "$charts_cnt" | grep -Eq '^[0-9]+$' && \
+           [ "$dashboards_cnt" -gt 0 ] && [ "$charts_cnt" -gt 0 ]; then
+          exit 0
+        fi
+        TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T \
+          superset bash -lc 'superset load_examples --load-test-data || superset load_examples'
+      args:
+        executable: /bin/bash
+      register: load_examples
+      retries: 5
+      delay: 10
+      until: load_examples.rc == 0
+
+    - name: Validate examples loaded
+      shell: |
+        dashboards_cnt=$(TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T \
+          db psql -U superset -d superset -Atc 'select count(*) from dashboards;' 2>/dev/null | tr -d '\r' | tail -n 1 || true)
+        charts_cnt=$(TAG={{ superset_version }} /usr/bin/docker compose -f {{ compose_file }} -f {{ compose_override }} exec -T \
+          db psql -U superset -d superset -Atc 'select count(*) from slices;' 2>/dev/null | tr -d '\r' | tail -n 1 || true)
+        echo "dashboards=${dashboards_cnt} charts=${charts_cnt}"
+        if echo "$dashboards_cnt" | grep -Eq '^[0-9]+$' && echo "$charts_cnt" | grep -Eq '^[0-9]+$' && \
+           [ "$dashboards_cnt" -gt 0 ] && [ "$charts_cnt" -gt 0 ]; then
+          exit 0
+        fi
+        exit 1
+      args:
+        executable: /bin/bash
+      register: examples_check
+      retries: 12
+      delay: 10
+      until: examples_check.rc == 0

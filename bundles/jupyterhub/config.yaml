@@ -2,7 +2,7 @@
 - type: cluster
   name: jupyterhub_cluster
   display_name: JupyterHub Cluster
-  version: "1.86p1"
+  version: "1.86p3"
   license: EULA.txt
   adcm_min_version: 2.6.0
   description: "Single-host JupyterHub with PAM(login) auth, installed into Python venv."
@@ -10,7 +10,7 @@
 - type: service
   name: jupyterhub
   display_name: JupyterHub
-  version: "1.86p1"
+  version: "1.86p3"
   description: "JupyterHub service packaged as an ADCM service. Installs into venv, configures systemd and JupyterHub config, enables JupyterLab by default."
   config:
     - name: __main_info
@@ -19,7 +19,7 @@
         After installation JupyterHub web-interface is available on the HTTP listener
         configured below.
 
-        Typical URL: http://host:8000/jupyter/hub/
+        Typical URL: http://host:28080/jupyter/hub/
 
         ===
         Author: D.Iatsenko <ydv@arenadata.io>
@@ -44,7 +44,12 @@
     - name: bind_port
       display_name: Bind port
       type: integer
-      default: 8000
+      default: 28080
+    - name: hub_port
+      display_name: Hub port
+      description: Internal JupyterHub port used by the proxy and user servers
+      type: integer
+      default: 28081
     - name: base_url
       display_name: Base URL prefix
       type: string

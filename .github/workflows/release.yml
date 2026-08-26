@@ -17,6 +17,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Validate bundles
+        run: |
+          yamllint -c .yamllint.yml bundles examples
+          python scripts/validate-bundles.py
+
       - name: Build bundle archives
         run: bash scripts/build-bundles.sh
 
@@ -26,4 +40,5 @@ jobs:
           files: |
             dist/*.tgz
             dist/SHA256SUMS
+            dist/catalog.json
           generate_release_notes: true
