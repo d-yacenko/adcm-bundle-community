@@ -23,6 +23,11 @@ build_one_bundle() {
   bundle_name="$(basename "${bundle_dir}")"
   config_file="${bundle_dir}/config.yaml"
 
+  if [[ ! "${bundle_name}" =~ ^[a-z0-9][a-z0-9._-]{0,63}$ ]]; then
+    echo "ERROR: unsafe bundle directory name: ${bundle_name}" >&2
+    exit 1
+  fi
+
   if [[ ! -f "${config_file}" ]]; then
     echo "ERROR: config.yaml not found for bundle '${bundle_name}'" >&2
     exit 1
@@ -53,6 +58,11 @@ build_one_bundle() {
 
   if [[ -z "${version}" ]]; then
     echo "ERROR: cannot determine version from ${config_file}" >&2
+    exit 1
+  fi
+
+  if [[ ! "${version}" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]]; then
+    echo "ERROR: unsafe bundle version in ${config_file}: ${version}" >&2
     exit 1
   fi
 

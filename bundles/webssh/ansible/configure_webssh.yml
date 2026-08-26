@@ -4,6 +4,7 @@
   gather_facts: no
   vars:
     webssh_port: "{{ services.webssh.config.port }}"
+    webssh_address: "{{ services.webssh.config.listen_address }}"
     webssh_service: "{{ services.webssh.config.systemd_unit }}"
   tasks:
     - name: Update systemd unit for WebSSH with new configuration
@@ -22,5 +23,4 @@
       systemd:
         name: "{{ webssh_service }}"
         state: restarted
-
 

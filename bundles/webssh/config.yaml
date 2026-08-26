@@ -1,7 +1,7 @@
 - type: cluster
   name: webssh_cluster
   display_name: WebSSH Cluster
-  version: "1.0.5"
+  version: "1.0.6"
   license: EULA.txt
   adcm_min_version: 2.6.0
   description: "Single-host WebSSH (web-based SSH terminal) on Ubuntu 22.04 (Jammy)."
@@ -9,7 +9,7 @@
 - type: service
   name: webssh
   display_name: WebSSH Web Terminal
-  version: "1.0.5"
+  version: "1.0.6"
   description: "Installs WebSSH (Python-based web SSH client) on Ubuntu 22.04 and exposes it via systemd service."
   config:
     - name: __main_info
@@ -19,9 +19,11 @@
 
         By default the bundled service listens on port 22222.
 
-        You can prefill connection parameters via URL, for example:
-        http://<host>:22222/?hostname=<host>&port=22&username=admin&password=<BASE64>
-        where password is base64-encoded.
+        Credentials must be entered interactively. Never put passwords in URL
+        parameters: URLs can leak through browser history, logs, and referrers.
+
+        The secure default binds WebSSH to 127.0.0.1. Publish it only through
+        an HTTPS reverse proxy with authentication and access restrictions.
 
         ===
         Author: D.V.Iatsenko
@@ -31,6 +33,14 @@
       display_name: WebSSH listen port
       type: integer
       default: 22222
+      min: 1024
+      max: 65535
+    - name: listen_address
+      display_name: WebSSH listen address
+      description: Use 127.0.0.1 behind a reverse proxy. Select 0.0.0.0 only on a protected network.
+      type: string
+      default: 127.0.0.1
+      pattern: "^(127\\.0\\.0\\.1|0\\.0\\.0\\.0)$"
     - name: base_url
       display_name: (unused) Legacy base URL
       type: string
@@ -39,6 +49,7 @@
       display_name: Systemd unit name
       type: string
       default: webssh
+      pattern: "^[A-Za-z0-9_.@-]+$"
     - name: ssh_user
       display_name: (unused) Legacy SSH user
       type: string
