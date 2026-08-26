@@ -34,11 +34,11 @@
         executable: pip3
       ignore_errors: yes
 
-    - name: Remove WebSSH service account
+    - name: Remove unprivileged WebSSH service account
       user:
         name: webssh
         state: absent
-        remove: true
+        remove: yes
 
     - name: Uninstall ADCM status checker mapping for WebSSH
       include_role:

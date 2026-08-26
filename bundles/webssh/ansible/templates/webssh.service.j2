@@ -10,18 +10,7 @@ Group=webssh
 ExecStart=/usr/bin/env wssh --address={{ webssh_address }} --port={{ webssh_port }}
 Restart=always
 RestartSec=5s
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-RestrictSUIDSGID=true
-CapabilityBoundingSet=
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 
 [Install]
 WantedBy=multi-user.target
-
 
