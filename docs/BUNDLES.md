@@ -1,30 +1,61 @@
-# Каталог ADCM-бандлов
+# Доступные ADCM бандлы
 
-Исходники находятся в `bundles/*`. Готовые архивы публикуются как assets в [последнем GitHub Release](https://github.com/d-yacenko/adcm-bundle-community/releases/latest).
+В репозитории исходники бандлов лежат в `bundles/*`.
+Готовые архивы `*.tgz` доступны в GitHub Releases:
+- `https://github.com/d-yacenko/adcm-bundle-community/releases/latest`
 
-| Бандл | Версия | ADCM | Архив |
-|---|---:|---:|---|
-| Bacula | 15.0.3_63 | >= 2.12.0 | [`adcm-bacula-15.0.3_63.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-bacula-15.0.3_63.tgz) |
-| JupyterHub | 1.86p3 | >= 2.6.0 | [`adcm-jupyterhub-1.86p3.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-jupyterhub-1.86p3.tgz) |
-| Apache Superset | 1.0.1 | >= 2.6.0 | [`adcm-superset-1.0.1.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-superset-1.0.1.tgz) |
-| pgAdmin 4 | 1.0.5 | >= 2.6.0 | [`adcm-pgadmin4-web-1.0.5.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-pgadmin4-web-1.0.5.tgz) |
-| WebSSH | 1.0.6 | >= 2.6.0 | [`adcm-webssh-1.0.6.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-webssh-1.0.6.tgz) |
+## 1. JupyterHub (v1.86p3)
 
-## Проверка целостности
+- Исходники: `bundles/jupyterhub`
+- Релизный файл: `adcm-jupyterhub-1.86p3.tgz`
+- Описание: многопользовательская среда JupyterHub/JupyterLab с PAM auth
+- ADCM: `>= 2.6.0`
+- Документация: https://adcm-bundle.duckdns.org/bundles/jupyterhub.html
+
+## 2. Apache Superset (v1.0.1)
+
+- Исходники: `bundles/superset`
+- Релизный файл: `adcm-superset-1.0.1.tgz`
+- Описание: Apache Superset 4.1.1 через официальные Docker-образы и Docker Compose
+- ADCM: `>= 2.6.0`
+- Документация: https://adcm-bundle.duckdns.org/bundles/superset.html
+
+## 3. pgAdmin 4 (v1.0.5)
+
+- Исходники: `bundles/pgadmin4-web`
+- Релизный файл: `adcm-pgadmin4-web-1.0.5.tgz`
+- Описание: web-интерфейс администрирования PostgreSQL через Apache WSGI
+- ADCM: `>= 2.6.0`
+- Документация: https://adcm-bundle.duckdns.org/bundles/pgadmin4.html
+
+## 4. WebSSH (v1.0.7)
+
+- Исходники: `bundles/webssh`
+- Релизный файл: `adcm-webssh-1.0.7.tgz`
+- Описание: web-терминал SSH через браузер
+- ADCM: `>= 2.6.0`
+- Документация: https://adcm-bundle.duckdns.org/bundles/webssh.html
+
+## Локальная сборка архивов
 
 ```bash
-curl -LO https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/SHA256SUMS
-sha256sum --check SHA256SUMS
-```
-
-## Локальная сборка
-
-```bash
-python3 -m pip install -r requirements-dev.txt
 bash scripts/build-bundles.sh
 ls -lh dist/
 ```
 
 ## Загрузка в ADCM
 
-Откройте `Bundles` в ADCM, нажмите `Upload bundle` и передайте нужный `.tgz`. Исходный код всего репозитория, который GitHub предлагает как `Source code`, не является отдельным ADCM-бандлом.
+### Через UI
+
+1. В ADCM откройте раздел `Bundles`.
+2. Нажмите `Upload Bundle`.
+3. Выберите нужный `adcm-*.tgz`.
+
+### Через API
+
+```bash
+curl -X POST \
+  -H "Authorization: Token YOUR_TOKEN" \
+  -F "file=@dist/adcm-jupyterhub-1.86p3.tgz" \
+  http://adcm-host:8000/api/v1/stack/upload/
+```

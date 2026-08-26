@@ -1,70 +1,113 @@
-# ADCM Bundle Community
+# ADCM Bundle Community 🚀
 
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Fadcm-bundle.duckdns.org)](https://adcm-bundle.duckdns.org)
-[![Validate bundles](https://github.com/d-yacenko/adcm-bundle-community/actions/workflows/ci.yml/badge.svg)](https://github.com/d-yacenko/adcm-bundle-community/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Community](https://img.shields.io/badge/community-open-brightgreen.svg)](https://adcm-bundle.duckdns.org)
 
-Открытый каталог бандлов для Arenadata Cluster Manager. Исходники проходят review через обычный GitHub fork/PR flow, а готовые архивы публикуются в GitHub Releases.
+Открытое сообщество разработчиков бандлов для Arenadata Cluster Manager (ADCM).
 
-- Сайт: [adcm-bundle.duckdns.org](https://adcm-bundle.duckdns.org)
-- Готовые архивы: [Latest Release](https://github.com/d-yacenko/adcm-bundle-community/releases/latest)
-- Правила участия: [CONTRIBUTING.md](CONTRIBUTING.md)
+🌐 **Сайт:** [adcm-bundle.duckdns.org](https://adcm-bundle.duckdns.org)
 
-## Бандлы
+## 📖 О проекте
 
-| Бандл | Версия | ADCM | Исходники | Скачать |
-|---|---:|---:|---|---|
-| Bacula | 15.0.3_63 | >= 2.12.0 | [bundles/bacula](bundles/bacula) | [`.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-bacula-15.0.3_63.tgz) |
-| JupyterHub | 1.86p3 | >= 2.6.0 | [bundles/jupyterhub](bundles/jupyterhub) | [`.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-jupyterhub-1.86p3.tgz) |
-| Apache Superset | 1.0.1 | >= 2.6.0 | [bundles/superset](bundles/superset) | [`.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-superset-1.0.1.tgz) |
-| pgAdmin 4 | 1.0.5 | >= 2.6.0 | [bundles/pgadmin4-web](bundles/pgadmin4-web) | [`.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-pgadmin4-web-1.0.5.tgz) |
-| WebSSH | 1.0.6 | >= 2.6.0 | [bundles/webssh](bundles/webssh) | [`.tgz`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/adcm-webssh-1.0.6.tgz) |
+**ADCM Bundle Community** — это открытая платформа для разработки, публикации и обмена бандлами для ADCM. Мы создаем экосистему готовых решений для оркестрации инфраструктуры.
 
-Проверить целостность загрузки можно по [`SHA256SUMS`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/SHA256SUMS). Машиночитаемый каталог доступен в [`catalog.json`](https://github.com/d-yacenko/adcm-bundle-community/releases/latest/download/catalog.json).
+### Что такое ADCM?
 
-## Использование готового бандла
+**ADCM** (Arenadata Cluster Manager) — это платформа для оркестрации инфраструктуры.
 
-1. Скачайте нужный `adcm-*.tgz` из таблицы или со страницы Releases.
-2. Откройте `Bundles` в ADCM.
-3. Нажмите `Upload bundle` и выберите архив.
-4. Создайте объект, настройте host-component mapping и запустите actions.
+**Бандл** — это пакет для интеграции с ADCM, содержащий:
+- Описание сервисов и их конфигураций (YAML DSL)
+- Ansible playbooks для автоматизации
+- Метрики и настройки мониторинга
+- Документацию по развертыванию
 
-## Локальная сборка
+## 📦 Доступные бандлы
+
+| Бандл | Версия | Автор | Размер | Описание |
+|-------|--------|-------|--------|----------|
+| **JupyterHub** | 1.86p3 | D.V. Iatsenko | ~115KB | Многопользовательская среда JupyterLab с PAM и действиями для установки дополнительных ядер |
+| **Apache Superset** | 1.0.1 | D.V. Iatsenko | ~18KB | BI-платформа Superset 4.1.1 в Docker Compose |
+| **pgAdmin 4** | 1.0.5 | D.V. Iatsenko | ~24KB | Web-интерфейс для администрирования PostgreSQL |
+| **WebSSH** | 1.0.5 | D.V. Iatsenko | ~22KB | Web-терминал для SSH подключений из браузера |
+
+📥 **Скачать:** Все бандлы доступны в директории `dist/`
+
+🌐 **Подробнее:** [adcm-bundle.duckdns.org](https://adcm-bundle.duckdns.org/#bundles)
+
+## 🚀 Быстрый старт
+
+### Использование готовых бандлов
 
 ```bash
+# 1. Клонируйте репозиторий
 git clone https://github.com/d-yacenko/adcm-bundle-community.git
 cd adcm-bundle-community
-python3 -m pip install -r requirements-dev.txt
-bash scripts/build-bundles.sh
+
+# 2. Готовые бандлы находятся в dist/
 ls -lh dist/
+
+# 3. Загрузите бандл в ADCM через Web UI или API
 ```
 
-`dist/` генерируется локально и не хранится в Git. Публикуемые `.tgz`, `SHA256SUMS` и `catalog.json` прикрепляются к GitHub Release.
+### Разработка собственного бандла
 
-## Как добавить бандл
+См. [examples/simple-bundle](examples/simple-bundle) для примера.
 
-1. Сделайте fork репозитория.
-2. Создайте каталог `bundles/<bundle-name>/`.
-3. Добавьте `config.yaml`, Ansible playbooks, `README.md` и `LICENSE`.
-4. Выполните локальную проверку и загрузите собранный архив в тестовый ADCM.
-5. Откройте Pull Request и заполните чеклист.
+**Документация:**
+- [Bundle DSL спецификация](https://docs.arenadata.io/ru/ADCM/current/references/bundle-dsl.html)
+- [Руководство по разработке](https://docs.arenadata.io/ru/ADCM/current/dev-tools/bundle-guide.html)
 
-Подробности находятся в [CONTRIBUTING.md](CONTRIBUTING.md). Минимальный пример — в [examples/simple-bundle](examples/simple-bundle).
+## 🤝 Участие в проекте
 
-## Автоматизация
+Мы приветствуем вклад от сообщества! См. [CONTRIBUTING.md](CONTRIBUTING.md)
 
-- каждый PR проверяется workflow `Validate bundles`;
-- сборка всех архивов должна успешно завершиться до merge;
-- push тега `v*` создаёт GitHub Release со всеми актуальными бандлами;
-- ветка `main` является источником истины для исходников каталога.
+### Как добавить бандл:
 
-## Полезные ссылки
+1. **Fork** репозиторий
+2. Создайте директорию в `bundles/your-bundle/`
+3. Разработайте и протестируйте бандл
+4. Соберите `.tgz` файл: `./scripts/build-bundles.sh`
+5. Создайте **Pull Request**
 
-- [Bundle DSL](https://docs.arenadata.io/ru/ADCM/current/references/bundle-dsl.html)
-- [Создание простого бандла](https://docs.arenadata.io/ru/ADCM/current/how-to/simple-bundle.html)
-- [ADCM](https://github.com/arenadata/adcm)
+## 📁 Структура репозитория
+
+```
+adcm-bundle-community/
+├── bundles/              # Исходники бандлов
+├── dist/                 # Готовые .tgz файлы
+├── examples/             # Примеры и шаблоны
+├── scripts/              # Скрипты сборки
+├── .github/workflows/    # CI/CD
+└── docs/                 # Документация
+```
+
+## 📚 Документация
+
+- [ADCM Documentation](https://docs.arenadata.io/ru/ADCM/)
+- [Bundle DSL Reference](https://docs.arenadata.io/ru/ADCM/current/references/bundle-dsl.html)
+- [ADCM API](https://docs.arenadata.io/ru/ADCM/current/dev-tools/adcm-api.html)
 - [Руководство по релизам](RELEASING.md)
 
-## Лицензия
+## 💬 Сообщество
 
-Код репозитория распространяется по Apache License 2.0. Сторонние продукты и зависимости сохраняют собственные лицензии.
+- 💬 [Telegram](https://t.me/adcm_community)
+- 🔀 [Pull requests](https://github.com/d-yacenko/adcm-bundle-community/pulls)
+
+## 🔗 Связанные репозитории
+
+- [landing](https://github.com/d-yacenko/landing) - Веб-сайт сообщества
+
+## 📄 Лицензия
+
+Apache License 2.0 - см. [LICENSE](LICENSE)
+
+---
+
+<div align="center">
+
+**Создано с ❤️ сообществом ADCM**
+
+[Website](https://adcm-bundle.duckdns.org) • [Documentation](https://docs.arenadata.io/ru/ADCM/) • [GitHub](https://github.com/d-yacenko/adcm-bundle-community)
+
+</div>

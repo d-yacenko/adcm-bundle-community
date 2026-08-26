@@ -3,7 +3,7 @@
   name: jupyterhub_cluster
   display_name: JupyterHub Cluster
   version: "1.86p3"
-  license: EULA.txt
+  license: LICENSE
   adcm_min_version: 2.6.0
   description: "Single-host JupyterHub with PAM(login) auth, installed into Python venv."
 

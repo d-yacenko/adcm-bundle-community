@@ -3,7 +3,7 @@
   name: pgadmin4_cluster
   display_name: pgAdmin 4 Cluster
   version: "1.0.5"
-  license: EULA.txt
+  license: LICENSE
   adcm_min_version: 2.6.0
   description: "Single-host pgAdmin 4 (web mode) behind Apache on Ubuntu 22.04 (Jammy)."
 
@@ -29,6 +29,11 @@
       display_name: Ubuntu codename (lsb_release -cs)
       type: string
       default: jammy
+    - name: package_version
+      display_name: pgAdmin upstream package version
+      type: string
+      default: "6.9"
+      description: "Проверенная версия pgAdmin для Ubuntu 22.04 (Jammy)."
     - name: base_url
       display_name: Base URL
       type: string
@@ -47,8 +52,8 @@
       default: admin@example.com
     - name: admin_password
       display_name: Initial admin password (pgAdmin)
-      type: string
-      default: changeMe123!
+      type: password
+      required: true
   components:
     WEB:
       display_name: Web
