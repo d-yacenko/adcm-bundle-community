@@ -1,0 +1,9 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Restart Superset service
+      systemd:
+        name: superset
+        state: restarted

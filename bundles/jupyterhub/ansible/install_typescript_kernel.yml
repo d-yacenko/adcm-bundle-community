@@ -195,7 +195,6 @@
         state: directory
         mode: "0755"
         owner: admin
-        group: user
 
     - name: Write tsconfig.json for TypeScript kernel (in admin home)
       copy:
@@ -203,7 +202,6 @@
         dest: "{{ admin_home }}/tsconfig.json"
         mode: "0644"
         owner: admin
-        group: user
 
     - name: Show kernel installation info
       debug:
@@ -221,5 +219,3 @@
         dest: "{{ admin_home }}/sample_typescript.ipynb"
         mode: "0644"
         owner: admin
-        group: user
-

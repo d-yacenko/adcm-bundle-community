@@ -1,0 +1,19 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Check Superset container status
+      shell: |
+        if /usr/bin/docker ps --format '{{"{{"}}.Names{{"}}"}}' | grep -q '^superset_app$'; then
+          echo running
+        else
+          echo stopped
+        fi
+      register: superset_state
+      changed_when: false
+      failed_when: false
+
+    - name: Set hoststate / servicestate for ADCM
+      debug:
+        msg: "superset {{ superset_state.stdout | default('stopped') }}"

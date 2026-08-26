@@ -1,0 +1,33 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Stop Superset service (best-effort)
+      systemd:
+        name: superset
+        state: stopped
+      ignore_errors: yes
+
+    - name: Disable Superset service (best-effort)
+      systemd:
+        name: superset
+        enabled: no
+      ignore_errors: yes
+
+    - name: Stop Docker Compose stack (best-effort)
+      shell: |
+        /usr/bin/docker compose -f /opt/superset/docker-compose-image-tag.yml -f /opt/superset/docker-compose.psycopg.override.yml down
+      args:
+        executable: /bin/bash
+      ignore_errors: yes
+
+    - name: Remove systemd unit
+      file:
+        path: /etc/systemd/system/superset.service
+        state: absent
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+      changed_when: false

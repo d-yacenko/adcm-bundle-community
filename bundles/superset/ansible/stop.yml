@@ -1,0 +1,9 @@
+---
+- hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Stop Superset service
+      systemd:
+        name: superset
+        state: stopped

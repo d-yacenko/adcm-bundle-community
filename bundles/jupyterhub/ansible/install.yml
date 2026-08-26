@@ -8,6 +8,7 @@
     data_dir: "{{ services.jupyterhub.config.data_dir }}"
     bind_host: "{{ services.jupyterhub.config.bind_host | default('') }}"
     bind_port: "{{ services.jupyterhub.config.bind_port }}"
+    hub_port: "{{ services.jupyterhub.config.hub_port | default(28081) }}"
     base_url: "{{ services.jupyterhub.config.base_url }}"
     spawner_cmd: "{{ services.jupyterhub.config.spawner_cmd }}"
     env_path: "{{ services.jupyterhub.config.env_path }}"
@@ -273,7 +274,6 @@
         state: directory
         mode: "0755"
         owner: admin
-        group: user
 
     - name: Copy sample Python notebook to admin home directory
       template:
@@ -281,5 +281,4 @@
         dest: "{{ admin_home }}/sample_python.ipynb"
         mode: "0644"
         owner: admin
-        group: user
     
