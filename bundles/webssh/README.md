@@ -16,7 +16,7 @@ ADCM bundle for deploying WebSSH as a managed systemd service on Ubuntu 22.04.
 
 ## Installation
 
-1. Upload `adcm-webssh-1.0.6.tgz` to ADCM.
+1. Upload `adcm-webssh-1.0.7.tgz` to ADCM.
 2. Create a cluster and add the WebSSH service.
 3. Assign its component to a target host.
 4. Configure the listening address and run `Install`.
@@ -24,10 +24,10 @@ ADCM bundle for deploying WebSSH as a managed systemd service on Ubuntu 22.04.
 ## Security
 
 - WebSSH runs as an unprivileged system user with systemd sandboxing.
-- The default listen address is `127.0.0.1`.
+- The default listen address is `0.0.0.0`; restrict it with firewall rules or a reverse proxy.
 - Publish the service through an HTTPS reverse proxy with authentication and network access controls.
-- Enter SSH credentials interactively. Never pass passwords in URLs, including Base64-encoded values.
-- Version `1.0.6` pins the upstream Python package to WebSSH `1.6.3`.
+- Enter SSH credentials interactively, or use URL-prefill inside a trusted internal network. Never expose such URLs publicly.
+- Version `1.0.7` pins the upstream Python package to WebSSH `1.6.3`.
 
 ## License
 

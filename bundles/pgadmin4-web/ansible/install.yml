@@ -4,6 +4,7 @@
   gather_facts: yes
   vars:
     repo_codename: "{{ services.pgadmin4_web.config.repo_codename }}"
+    package_version: "{{ services.pgadmin4_web.config.package_version }}"
     base_url: "{{ services.pgadmin4_web.config.base_url }}"
     apache_service: "{{ services.pgadmin4_web.config.apache_service }}"
     admin_email: "{{ services.pgadmin4_web.config.admin_email }}"
@@ -60,7 +61,7 @@
 
     - name: Install pgadmin4-web
       apt:
-        name: pgadmin4-web
+        name: "pgadmin4-web={{ package_version }}"
         state: present
       environment:
         DEBIAN_FRONTEND: noninteractive
