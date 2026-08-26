@@ -1,0 +1,102 @@
+---
+- name: Install Bacula File Daemon on new clients
+  hosts: client.client.add
+  become: yes
+  gather_facts: true
+  vars:
+    bacula_fd_conf: "/etc/bacula/bacula-fd.conf"
+    cl_name: "{{ inventory_hostname }}-fd"
+    dir_host: "{{ groups['director.director'][0] }}"
+    bacula_dir_pw_adcm: "{{ hostvars[dir_host]['services']['director']['config']['bacula_dir_pw'] }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Bacula client
+      apt:
+        name: bacula-client
+        state: present
+    
+    - name: Ensure /etc/bacula directory exists
+      file:
+        path: /etc/bacula
+        state: directory
+        owner: bacula
+        group: bacula
+        mode: '0755'
+
+    - name: Ensure /var/lib/bacula directory exists
+      file:
+        path: /var/lib/bacula
+        state: directory
+        owner: bacula
+        group: bacula
+        mode: '0755'
+
+    - name: Ensure /var/run/bacula directory exists
+      file:
+        path: /var/run/bacula
+        state: directory
+        owner: bacula
+        group: bacula
+        mode: '0755'
+
+    - name: Overwrite bacula-fd.conf with empty content
+      copy:
+        dest: "{{ bacula_fd_conf }}"
+        content: |
+          #
+          # Bacula File Daemon Configuration - Managed by ADCM
+          #
+        force: yes
+        owner: bacula
+        group: bacula
+        mode: '0640'
+
+    - name: Add FileDaemon block
+      blockinfile:
+        path: "{{ bacula_fd_conf }}"
+        block: |
+          FileDaemon {
+            Name = {{ cl_name }}
+            FDport = 9102
+            WorkingDirectory = "/var/lib/bacula"
+            PidDirectory = "/var/run/bacula"
+            Maximum Concurrent Jobs = 20
+          }
+        marker: "# {mark} FILEDAEMON BLOCK"
+
+    - name: Add Director block
+      blockinfile:
+        path: "{{ bacula_fd_conf }}"
+        block: |
+          Director {
+            Name = {{ dir_host }}-dir
+            Password = "{{ bacula_dir_pw_adcm }}"
+          }
+        marker: "# {mark} DIRECTOR BLOCK"
+
+    - name: Add Messages block
+      blockinfile:
+        path: "{{ bacula_fd_conf }}"
+        block: |
+          Messages {
+            Name = Standard
+            director = {{ dir_host }}-dir = all, !skipped, !restored
+          }
+        marker: "# {mark} MESSAGES BLOCK"
+
+    - name: Validate bacula-fd.conf syntax
+      command: bacula-fd -t
+      register: validate_result
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Restart File Daemon
+      service:
+        name: bacula-fd
+        state: restarted
+        enabled: yes

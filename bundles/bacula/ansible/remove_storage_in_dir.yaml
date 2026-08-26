@@ -1,0 +1,278 @@
+---
+- name: Remove storage from Director configuration
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+    storages_to_remove: "{{ groups['storage.storage.remove'] | default([]) }}"
+
+  tasks:
+    - name: Fail if no storages to remove
+      fail:
+        msg: "No storages to remove. Make sure you selected hosts in the host-component mapping."
+      when: storages_to_remove | length == 0
+
+    # ==========================================
+    # Getting the Volume list for deleted Storage
+    # ==========================================
+    - name: Get all volumes for each storage
+      shell: |
+        # Получаем ВСЕ тома из каталога, а затем фильтруем их по строгому префиксу
+        echo "list volumes" | bconsole 2>&1 | awk -F'|' -v prefix="{{ item }}_vol_" '
+          # Пропускаем заголовок и разделители таблицы
+          /mediaid/ { next }
+          /^\+/ { next }
+          {
+            # Берем ТРЕТЬЮ колонку ($3), так как $2 - это числовой mediaid
+            name = $3;
+            gsub(/^[ \t]+|[ \t]+$/, "", name);
+            
+            # Выводим только если имя тома начинается с нужного префикса
+            # Например, для velagin-bacula-2-3 префикс будет velagin-bacula-2-3_vol_
+            if (name ~ "^" prefix) print name;
+          }
+        '
+      loop: "{{ storages_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      register: volumes_per_storage_raw
+      changed_when: false
+      failed_when: false
+
+    - name: Flatten volumes list
+      set_fact:
+        # Используем stdout_lines напрямую из результатов shell, так как теперь это не set_fact в цикле
+        all_volumes_to_remove: "{{ volumes_per_storage_raw.results | map(attribute='stdout_lines') | flatten | map('trim') | select() | list }}"
+
+    - name: Show volumes to remove
+      debug:
+        msg: "Volumes to remove: {{ all_volumes_to_remove }}"
+      when: all_volumes_to_remove | length > 0
+
+    # ==========================================
+    # Deleting Volumes from Catalog
+    # ==========================================
+    - name: Purge volumes from catalog
+      shell: |
+        # Используем printf вместо echo -e для гарантии переводов строк
+        printf "purge volume={{ item }}\n" | bconsole 2>&1
+      loop: "{{ all_volumes_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      register: purge_results
+      changed_when: "'OK' in purge_results.stdout or 'purged' in purge_results.stdout"
+      failed_when: false
+      when: all_volumes_to_remove | length > 0
+
+    - name: Delete volumes from catalog
+      shell: |
+        # printf гарантированно передаст "yes" на следующей строке для подтверждения
+        printf "delete volume={{ item }}\nyes\n" | bconsole 2>&1
+      loop: "{{ all_volumes_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      register: delete_results
+      changed_when: "'deleted' in delete_results.stdout or 'OK' in delete_results.stdout"
+      failed_when: false
+      when: all_volumes_to_remove | length > 0
+
+    # ==========================================
+    # Search for Dependent Jobs
+    # ==========================================
+    - name: Find all Job blocks that reference these storages
+      shell: |
+        awk '
+          /Job\s*\{/ { in_job=1; job_name="" }
+          in_job && /Name\s*=\s*"[^"]+"/ {
+            match($0, /Name\s*=\s*"([^"]+)"/, arr)
+            job_name=arr[1]
+          }
+          in_job && /Storage\s*=\s*{{ item }}_sd/ && job_name != "" {
+            print job_name
+          }
+          /^\}/ { in_job=0 }
+        ' {{ bacula_dir_conf }}
+      loop: "{{ storages_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      register: dependent_jobs
+      changed_when: false
+      failed_when: false
+
+    - name: Parse job names
+      set_fact:
+        jobs_to_remove: "{{ dependent_jobs.results | map(attribute='stdout_lines') | flatten | map('trim') | list }}"
+
+    - name: Show dependent jobs
+      debug:
+        msg: "Jobs to be removed: {{ jobs_to_remove }}"
+      when: jobs_to_remove | length > 0
+
+    - name: Read Director configuration for safety checks
+      slurp:
+        src: /etc/bacula/bacula-dir.conf
+      register: bacula_dir_conf_raw
+
+    - name: Count total Job blocks in configuration
+      set_fact:
+        total_jobs_count: "{{ (bacula_dir_conf_raw.content | b64decode | regex_findall('^\\s*Job\\s*\\{', multiline=True)) | length }}"
+
+    - name: "SAFETY CHECK 1: Find exactly which storages are used by doomed jobs"
+      shell: |
+        awk -v jobs_regex="^({{ jobs_to_remove | join('|') }})$" '
+          /^\s*Job\s*\{/ { in_job=1; job_name=""; job_storage=""; }
+          in_job && /Name\s*=/ { 
+              val=$0; sub(/.*Name\s*=\s*"?/, "", val); sub(/".*/, "", val); job_name=val; 
+          }
+          in_job && /Storage\s*=/ { 
+              val=$0; sub(/.*Storage\s*=\s*"?/, "", val); sub(/".*/, "", val); job_storage=val; 
+          }
+          /^\s*\}/ && in_job {
+            if (job_name != "" && match(job_name, jobs_regex)) {
+              if (job_storage != "") {
+                # Форматируем вывод прямо в awk для красивого сообщения
+                print "- Job \"" job_name "\" uses Storage \"" job_storage "\"";
+              }
+            }
+            in_job=0;
+          }
+        ' /etc/bacula/bacula-dir.conf
+      register: conflicting_storages_raw
+      changed_when: false
+      failed_when: false
+
+    - name: "SAFETY CHECK 1: Fail if we are about to delete the LAST remaining Job"
+      fail:
+        msg: |
+          FATAL ERROR: Cannot remove storages!
+          You are trying to remove storages: {{ storages_to_remove | join(', ') }}
+          These storages are used by {{ jobs_to_remove | length }} job(s): {{ jobs_to_remove | join(', ') }}.
+          However, the TOTAL number of Jobs in the Director config is {{ total_jobs_count }}.
+          
+          If we proceed, 0 Jobs will remain, and bacula-dir will crash on startup!
+          
+          SPECIFIC CONFLICT:
+          {{ conflicting_storages_raw.stdout_lines | default(['No specific conflicts found by awk']) | join('\n') }}
+          
+      when: 
+        - jobs_to_remove | length > 0
+        - jobs_to_remove | length == total_jobs_count | int
+
+    - name: "SAFETY CHECK 2: Find ALL jobs referencing removed storages (using robust awk)"
+      shell: |
+        awk -v storages_regex="^({{ storages_to_remove | join('|') }})" '
+          /^\s*Job\s*\{/ { in_job=1; job_name=""; }
+          in_job && /Name\s*=/ { 
+              val=$0; sub(/.*Name\s*=\s*"?/, "", val); sub(/".*/, "", val); job_name=val; 
+          }
+          in_job && /Storage\s*=/ { 
+              val=$0; sub(/.*Storage\s*=\s*"?/, "", val); sub(/".*/, "", val); 
+              if (match(val, storages_regex)) {
+                  print job_name;
+              }
+          }
+          /^\s*\}/ && in_job { in_job=0; }
+        ' /etc/bacula/bacula-dir.conf | sort -u
+      register: all_actual_jobs_using_storages
+      changed_when: false
+      failed_when: false
+
+    - name: "SAFETY CHECK 2: Calculate orphaned jobs"
+      set_fact:
+        orphaned_jobs: "{{ (all_actual_jobs_using_storages.stdout_lines | map('trim') | list) | difference(jobs_to_remove) }}"
+
+    - name: "SAFETY CHECK 2: Fail if orphaned jobs found"
+      fail:
+        msg: |
+          FATAL ERROR: The following jobs still reference the removed storages but were NOT scheduled for removal:
+          {{ orphaned_jobs | join(', ') }}
+          
+          This usually means the initial grep missed them.
+          Please check the configuration manually or add them to the removal list.
+      when: orphaned_jobs | length > 0
+
+    # ==========================================
+    # Deleting Job and Schedule blocks
+    # ==========================================
+    - name: Remove Job blocks
+      blockinfile:
+        path: /etc/bacula/bacula-dir.conf
+        marker: "# {mark} ANSIBLE MANAGED JOB {{ item }}"
+        state: absent
+      loop: "{{ jobs_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      when: jobs_to_remove | length > 0
+
+    - name: Remove Schedule blocks for dependent jobs
+      blockinfile:
+        path: /etc/bacula/bacula-dir.conf
+        marker: "# {mark} ANSIBLE MANAGED SCHEDULE Schedule_{{ item }}"
+        state: absent
+      loop: "{{ jobs_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      when: jobs_to_remove | length > 0
+
+    # ==========================================
+    # Deleting Storage Blocks
+    # ==========================================
+    - name: Remove Storage blocks
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED STORAGE {{ item }}_sd"
+        state: absent
+      loop: "{{ storages_to_remove }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    # ==========================================
+    # Validation and reboot
+    # ==========================================
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Show validation errors if failed
+      debug:
+        var: validate_result.stdout_lines
+      when: validate_result.rc != 0
+
+    - name: Reload Director
+      shell: 'echo "reload" | bconsole'
+      register: reload_result
+      failed_when: "'1000 OK' not in reload_result.stdout"
+      when: validate_result.rc == 0
+
+    - name: Fail if validation failed
+      fail:
+        msg: |
+          Director config validation failed after removing storage!
+          
+          Error: {{ validate_result.stdout }}
+          
+          This usually means some Job blocks still reference the removed storage.
+          Please check the config manually:
+          sudo cat {{ bacula_dir_conf }} | grep -A 10 "Storage = {{ storages_to_remove | join('_sd') }}"
+      when: validate_result.rc != 0
+
+    # ==========================================
+    # Finaly report
+    # ==========================================
+    - name: Show removal summary
+      debug:
+        msg: |
+          Storage removal completed successfully!
+          Removed storages: {{ storages_to_remove | default([]) | join(', ') }}
+          Removed jobs: {{ jobs_to_remove | default([]) | join(', ') }}
+          Director configuration reloaded.

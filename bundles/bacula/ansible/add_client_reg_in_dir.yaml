@@ -1,0 +1,119 @@
+---
+- name: Register new clients on Director and create FileSets
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+    new_clients: "{{ groups['client.client.add'] | default([]) }}"
+
+  tasks:
+    - name: Debug new clients
+      debug:
+        msg: "Registering clients: {{ new_clients }}"
+      when: new_clients | length > 0
+
+    - name: Fail if no new clients to register
+      fail:
+        msg: "No new clients to register. Make sure you selected hosts in the host-component mapping."
+      when: new_clients | length == 0
+
+    # ==========================================
+    # Adding Client Blocks
+    # ==========================================
+    - name: Add Client blocks to Director
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED CLIENT {{ item }}-fd"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          Client {
+            Name = {{ item }}-fd
+            Address = {{ hostvars[item].ansible_host }}
+            FDPort = 9102
+            Catalog = MyCatalog
+            Password = "{{ hostvars[item].services.director.config.bacula_dir_pw }}"
+            File Retention = 30 days
+            Job Retention = 6 months
+            AutoPrune = yes
+          }
+      loop: "{{ new_clients }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    # ==========================================
+    # Creating a FileSet for each new client
+    # ==========================================
+    - name: Show paths for each new client
+      debug:
+        msg: "Client {{ item }}: Paths = {{ hostvars[item].services.client.config.Paths | default(services.client.config.Paths) }}"
+      loop: "{{ new_clients }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    - name: Add FileSet blocks to Director for each new client
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED FILESET {{ item }}_fs"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          FileSet {
+            Name = "{{ item }}_fs"
+            Include {
+              Options {
+                Compression = GZIP
+                Signature = MD5
+              }
+          {% for path in hostvars[item].services.client.config.Paths | default(services.client.config.Paths) %}
+              File = {{ path }}
+          {% endfor %}
+            }
+          }
+      loop: "{{ new_clients }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+
+    # ==========================================
+    # Validation and reboot
+    # ==========================================
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Rollback on validation failure
+      block:
+        - name: Remove Client blocks
+          blockinfile:
+            path: "{{ bacula_dir_conf }}"
+            marker: "# {mark} ANSIBLE MANAGED CLIENT {{ item }}-fd"
+            state: absent
+          loop: "{{ new_clients }}"
+          loop_control:
+            loop_var: item
+            label: "{{ item }}"
+
+        - name: Remove FileSet blocks
+          blockinfile:
+            path: "{{ bacula_dir_conf }}"
+            marker: "# {mark} ANSIBLE MANAGED FILESET {{ item }}_fs"
+            state: absent
+          loop: "{{ new_clients }}"
+          loop_control:
+            loop_var: item
+            label: "{{ item }}"
+
+        - name: Fail with error
+          fail:
+            msg: |
+              Director config validation failed! Changes rolled back.
+              Error: {{ validate_result.stdout }} {{ validate_result.stderr }}
+      when: validate_result.rc != 0
+
+    - name: Reload Director
+      shell: 'echo "reload" | bconsole'
+      when: validate_result.rc == 0

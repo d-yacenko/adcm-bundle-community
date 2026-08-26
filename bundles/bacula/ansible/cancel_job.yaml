@@ -1,0 +1,95 @@
+---
+- name: Cancel Bacula Job by Name
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    job_name: "{{ job.config.job_name }}"
+
+  tasks:
+    - name: Get all jobs and filter by name
+      shell: |
+        echo "list jobs" | bconsole 2>&1 | grep -E "\\|.*{{ job_name }}.*\\|"
+      register: filtered_jobs
+      changed_when: false
+      failed_when: false
+
+    - name: Parse job IDs from filtered output
+      set_fact:
+        job_ids: "{{ filtered_jobs.stdout_lines | select('match', '^\\|\\s+\\d+') | map('regex_replace', '^\\|\\s+(\\d+).*', '\\1') | list }}"
+
+    - name: Show found job IDs
+      debug:
+        msg: "Found {{ job_ids | length }} jobs with name '{{ job_name }}': {{ job_ids }}"
+
+    - name: Fail if no jobs found
+      fail:
+        msg: |
+          No jobs found with name '{{ job_name }}'!
+          
+          Current jobs:
+          {{ filtered_jobs.stdout | default('Unable to retrieve') }}
+      when: job_ids | length == 0
+
+    - name: Check status of each job
+      shell: |
+        echo "list jobid={{ item }}" | bconsole 2>&1
+      loop: "{{ job_ids }}"
+      loop_control:
+        loop_var: item
+        label: "Job {{ item }}"
+      register: job_statuses
+      changed_when: false
+      failed_when: false
+
+    - name: Separate running and non-running jobs
+      set_fact:
+        running_jobs: "{{ job_statuses.results | selectattr('stdout', 'search', '\\|\\s+R\\s+\\|') | map(attribute='item') | list }}"
+        non_running_jobs: "{{ job_statuses.results | rejectattr('stdout', 'search', '\\|\\s+R\\s+\\|') | map(attribute='item') | list }}"
+
+    - name: Show job status summary
+      debug:
+        msg: |
+          Running jobs (will be canceled): {{ running_jobs }}
+          Non-running jobs (cannot be canceled): {{ non_running_jobs }}
+
+    - name: Cancel running jobs
+      shell: |
+        echo "cancel jobid={{ item }}" | bconsole
+      loop: "{{ running_jobs }}"
+      loop_control:
+        loop_var: item
+        label: "Canceling Job {{ item }}"
+      register: cancel_results
+      failed_when: false
+      when: running_jobs | length > 0
+
+    - name: Warn about non-running jobs
+      debug:
+        msg: |
+          WARNING: {{ non_running_jobs | length }} job(s) with name '{{ job_name }}' are not running.
+          Job IDs: {{ non_running_jobs }}
+          
+          Use 'Delete Job' action to remove them from catalog.
+      when: non_running_jobs | length > 0
+
+    - name: Fail if no running jobs found
+      fail:
+        msg: |
+          No running jobs found with name '{{ job_name }}'!
+          
+          Found {{ job_ids | length }} total jobs, but none are currently running.
+          Job IDs: {{ job_ids }}
+          
+          To remove these jobs from catalog, use the 'Delete Job' action.
+      when: running_jobs | length == 0
+
+    - name: Verify cancellation
+      shell: 'echo "list jobs" | bconsole'
+      register: final_jobs
+      changed_when: false
+      failed_when: false
+
+    - name: Show final job list
+      debug:
+        var: final_jobs.stdout_lines

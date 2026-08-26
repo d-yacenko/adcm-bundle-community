@@ -32,8 +32,8 @@ build_one_bundle() {
     awk '
       $1 == "-" && $2 == "type:" && $3 == "cluster" { in_cluster = 1; next }
       in_cluster && $1 == "version:" {
-        gsub(/"/, "", $2)
-        print $2
+        gsub(/"/, "", $NF)
+        print $NF
         exit
       }
     ' "${config_file}" || true
@@ -43,8 +43,8 @@ build_one_bundle() {
     version="$(
       awk '
         $1 == "version:" {
-          gsub(/"/, "", $2)
-          print $2
+          gsub(/"/, "", $NF)
+          print $NF
           exit
         }
       ' "${config_file}" || true

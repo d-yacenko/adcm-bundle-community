@@ -1,0 +1,41 @@
+---
+- name: Get Bacula Director Status
+  hosts: director.director
+  become: yes
+  gather_facts: false
+  vars:
+    bconsole_conf: "/etc/bacula/bconsole.conf"
+
+  tasks:
+    - name: Check if bconsole is available
+      command: which bconsole
+      register: bconsole_check
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Fail if bconsole not installed
+      fail:
+        msg: "bconsole command not found. Please ensure bacula-console is installed on Director host."
+      when: bconsole_check.rc != 0
+
+    - name: Get Director status
+      shell: 'echo "status director" | bconsole 2>&1'
+      register: status_output
+      changed_when: false
+      failed_when: false
+
+    - name: Check if connection to Director succeeded
+      fail:
+        msg: |
+          Failed to connect to Director!
+          Output: {{ status_output.stdout }}
+      when: "'1000 OK' not in status_output.stdout and status_output.rc != 0"
+
+    - name: Display Director status
+      debug:
+        msg: |
+          ========================================
+          BACULA DIRECTOR STATUS
+          ========================================
+          {{ status_output.stdout }}
+          ========================================

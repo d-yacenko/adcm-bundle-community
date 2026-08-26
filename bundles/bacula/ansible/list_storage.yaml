@@ -1,0 +1,102 @@
+---
+- name: List Bacula Storage with Devices
+  hosts: director.director
+  become: yes
+  gather_facts: false
+
+  tasks:
+    - name: Get storage list from Director config
+      shell: 'echo "show storage" | bconsole 2>&1'
+      register: show_storage
+      changed_when: false
+
+    - name: Parse storage list into JSON string
+      set_fact:
+        _storage_details_json: >-
+          {% set ns = namespace(storages=[]) %}
+          {% for line in show_storage.stdout_lines %}
+            {% if 'storage:' in line.lower() %}
+              {% set name_match = line | regex_findall('(?i)name=([^\\s]+)') %}
+              {% set addr_match = line | regex_findall('(?i)address=([^\\s]+)') %}
+              {% set port_match = line | regex_findall('(?i)sdport=([^\\s]+)') %}
+              {% set name = name_match[0] if name_match | length > 0 else '' %}
+              {% set address = addr_match[0] if addr_match | length > 0 else '' %}
+              {% set sdport = port_match[0] if port_match | length > 0 else '' %}
+              {% if name %}
+                {% set _ = ns.storages.append({'name': name, 'address': address, 'sdport': sdport, 'devices': []}) %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.storages | to_json }}
+
+    - name: Convert storage JSON to native list
+      set_fact:
+        storage_details: "{{ _storage_details_json | from_json }}"
+
+    - name: Get detailed status for each storage
+      shell: 'echo "status storage={{ item.name }}" | bconsole 2>&1'
+      loop: "{{ storage_details }}"
+      register: storage_statuses
+      changed_when: false
+      when: storage_details | length > 0
+
+    - name: Parse storage status into devices
+      set_fact:
+        _storage_with_devices_json: >-
+          {% set ns = namespace(results=[]) %}
+          {% for item in storage_details %}
+            {% set out = storage_statuses.results[loop.index0].stdout %}
+            {% set status = 'Offline' if 'Connection refused' in out or 'Failed to connect' in out or 'not found' in out or 'Cannot connect' in out else 'Online' %}
+            
+            {% set matches = out | regex_findall('Device File:\\s+"([^"]+)"\\s+\\(([^)]+)\\)[\\s\\S]*?Available Space=([0-9.]+\\s*[KMGT]?B)') %}
+            
+            {% set devs = [] %}
+            {% for m in matches %}
+              {% set _ = devs.append({'name': m[0], 'path': m[1], 'free_space': m[2]}) %}
+            {% endfor %}
+            
+            {% set _ = ns.results.append(item | combine({'status': status, 'devices': devs})) %}
+          {% endfor %}
+          {{ ns.results | to_json }}
+      when: storage_details | length > 0
+
+    - name: Convert storage with devices JSON to native list
+      set_fact:
+        storage_with_devices: "{{ _storage_with_devices_json | from_json }}"
+      when: storage_details | length > 0
+
+    - name: Build storage report
+      set_fact:
+        storage_report: |
+          ========================================
+          BACULA STORAGE OVERVIEW
+          ========================================
+
+          STORAGE DAEMONS:
+          {% for st in storage_with_devices | default([]) %}
+           ----------------------------------------------
+            {{ st.name }}  ({{ st.address }}:{{ st.sdport }}) [{{ st.status }}]
+          {% if st.devices | length > 0 %}
+               Devices:
+            {% for dev in st.devices %}
+                 - {{ dev.name }}
+                   Path:  {{ dev.path }}
+                   Space: {{ dev.free_space }} free
+            {% endfor %}
+          {% else %}
+               (No devices found)
+          {% endif %}
+          {% endfor %}
+           ----------------------------------------------
+          ========================================
+      when: storage_details | default([]) | length > 0
+
+    - name: Display storage report
+      debug:
+        msg: "{{ storage_report.split('\n') }}"
+      when: storage_details | default([]) | length > 0
+
+    - name: No storage found
+      debug:
+        msg: "========================================\nNo storage daemons found in Director configuration.\n========================================"
+      when: storage_details | default([]) | length == 0

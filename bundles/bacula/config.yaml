@@ -1,0 +1,841 @@
+- name: Bacula
+  display_name: Bacula
+  type: cluster
+  description: "Bacula is a cross-platform client-server software for managing network-based backup, recovery, and data verification. It allows you to create backups of files, directories, databases, email server data, system images, and operating systems."
+  version: &version 15.0.3_63
+  contract_version: "2.1"
+  edition: community
+  adcm_min_version: 2.12.0
+  venv: &venv_cluster "2.16"
+
+  upgrade:
+    - name: *version
+      from_edition: ['community']
+      versions:
+        min: 15.0.3_1
+        max_strict: *version
+      states:
+        available: any
+
+  actions:  
+    Job_Status:
+      display_name: "Job Status"
+      description: "Display detailed information about a specific job including status, files, bytes, volumes, and error details"
+      states:
+        available:
+          - installed
+        on_success: installed
+      scripts:
+        - name: Job Status
+          script_type: ansible
+          script: ansible/job_status.yaml
+      config:
+        - name: job_id
+          display_name: "Job ID"
+          description: "ID of the job to get detailed information about"
+          type: integer
+          required: true
+    Run_Job:
+      display_name: "Run Job"
+      description: "Manually run a backup job outside of its schedule"
+      states:
+       available:
+         - installed
+      scripts:
+        - name: Run Job
+          script_type: ansible
+          script: ansible/run_job.yaml
+      config:
+        - name: job_name
+          display_name: "Job Name"
+          description: "Name of the backup job to run manually"
+          type: string
+          required: true
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+
+    Disable_Job:
+      display_name: "Disable Job"
+      description: "Disable a backup job — it remains in config but will not run on schedule. Can be started manually via bconsole."
+      states:
+        available:
+          - installed
+        on_success: installed
+      scripts:
+        - name: Disable Job
+          script_type: ansible
+          script: ansible/disable_job.yaml
+      config:
+        - name: job_name
+          display_name: "Job Name"
+          description: "Name of the backup job to disable"
+          type: string
+          required: true
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+    Enable_Job:
+      display_name: "Enable Job"
+      description: "Enable a previously disabled backup job — it will resume running on its schedule"
+      states:
+        available:
+          - installed
+        on_success: installed
+      scripts:
+        - name: Enable Job
+          script_type: ansible
+          script: ansible/enable_job.yaml
+      config:
+        - name: job_name
+          display_name: "Job Name"
+          description: "Name of the backup job to enable"
+          type: string
+          required: true
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+    Install:
+      display_name: "Install"  
+      description: "Install Bacula infrastructure including PostgreSQL database, Director daemon, and all configured Client and Storage hosts"
+      scripts:
+        - name: Install postgresql
+          script_type: ansible
+          script: ansible/install_postgresql.yaml
+        - name: Install Client
+          script_type: ansible
+          script: ansible/install_client.yaml
+        - name: Install Storage
+          script_type: ansible
+          script: ansible/install_storage.yaml
+        - name: Install director
+          script_type: ansible
+          script: ansible/install_director.yaml
+      states:
+        available: 
+          - created
+        on_success: installed
+      config:
+        - name: job_name
+          display_name: "Job Name"
+          type: string
+          description: "Unique name for the backup job (e.g., Backup_WebServer, Daily_Database)"
+          pattern: "^[a-zA-Z0-9_-]+$"
+        - name: Backup_level
+          display_name: Backup level
+          type: variant
+          description: "Backup level: Full (complete backup), Incremental (only changed files since last backup), or Differential (changed files since last full backup)"
+          source:
+            type: inline
+            strict: true
+            value:
+              - Full
+              - Incremental
+              - Differential
+      
+        - name: storage_host
+          display_name: Storage host
+          type: variant
+          description: "Select the storage host where backup volumes will be stored"
+          source:
+            type: builtin
+            name: host
+            args:
+              predicate: and
+              args:
+                - predicate: in_service
+                  args:
+                    service: storage
+
+        - name: messages_name
+          display_name: Messages name
+          type: variant
+          description: "Message profile for job notifications: Standard (log to file and console) or Daemon (technical logs)"
+          source:
+            type: inline
+            strict: true
+            value:
+              - Standard
+              - Daemon
+          default: Standard
+        - name: schedule
+          display_name: Schedule
+          type: group
+          description: "Define when the backup job should run automatically"
+          subs:
+            - name: Frequency
+              type: selection_group
+              description: "Select the frequency of backup execution"
+              subs:
+                - name: daily
+                  display_name: Daily
+                  type: group
+                  description: "Running a task daily"
+                  subs: 
+                    - name: dummy
+                      type: string
+                      required: false
+                      ui_options:
+                        invisible: true
+                - name: hourly 
+                  display_name: Hourly
+                  description: "Running a task hourly"
+                  type: group
+                  subs: 
+                    - name: dummy
+                      type: string
+                      required: false
+                      ui_options:
+                        invisible: true
+                - name: weekly  
+                  display_name: Weekly
+                  description: "Running a task every week"
+                  type: group
+                  subs: 
+                    - name: day
+                      display_name: Day
+                      type: variant
+                      description: "Day of the week for weekly backup"
+                      source:
+                        type: inline
+                        strict: true
+                        value:
+                          - Sun
+                          - Mon
+                          - Tue
+                          - Wed
+                          - Thu
+                          - Fri
+                          - Sat
+                - name: monthly 
+                  display_name: Monthly  
+                  type: group
+                  description: "Running a task monthly"
+                  subs: 
+                    - name: day_selector
+                      display_name: Day selector 
+                      type: selection_group
+                      description: "Select how to specify the day of month"
+                      subs:
+                        - name: day_of_month
+                          display_name: Day of month
+                          description: "Specify exact day of month (1-31)"
+                          type: group
+                          subs:
+                            - name: day
+                              type: integer
+                              description: "Day of the month (1-31)"
+                              min: 1
+                              max: 31
+                        - name: day_of_week
+                          display_name: Day of week
+                          type: group
+                          description: "Specify day by week number and weekday"
+                          subs:                          
+                            - name: monthly_weekday
+                              display_name: Day week
+                              type: variant
+                              description: "Day of the week"
+                              source:
+                                type: inline
+                                strict: true
+                                value:
+                                  - Sun
+                                  - Mon
+                                  - Tue
+                                  - Wed
+                                  - Thu
+                                  - Fri
+                                  - Sat                           
+                            - name: monthly_week
+                              display_name: Week number
+                              type: variant
+                              description: "Week number in the month"
+                              source:
+                                type: inline
+                                strict: true
+                                value:
+                                  - 1st
+                                  - 2nd
+                                  - 3rd
+                                  - 4th
+                                  - 5th
+                                  - last
+                - name: mon_fri 
+                  display_name: Monday - Friday  
+                  type: group
+                  description: "Running a task Monday through Friday"
+                  subs: 
+                    - name: dummy
+                      type: string
+                      required: false
+                      ui_options:
+                        invisible: true
+                - name: mon_sat   
+                  display_name: Monday - Saturday
+                  type: group
+                  description: "Running a task Monday through Saturday"
+                  subs: 
+                    - name: dummy
+                      type: string
+                      required: false
+                      ui_options:
+                        invisible: true
+            - name: Time
+              type: string
+              description: "Run time in format HH:MM (e.g., 02:00 for 2 AM)"
+              pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+
+    Create_Restore_Job:
+      display_name: "Create Restore Job"
+      description: "Restore files from a backup job to a specified client and path"
+      states:
+        available: 
+          - installed
+        on_success: installed
+      scripts:
+        - name: Restore Job
+          script_type: ansible
+          script: ansible/restore_job.yaml
+      config:
+        - name: job_id
+          display_name: "Job ID"
+          description: "ID of the backup job to restore from (use 'List Jobs' to find the ID)"
+          type: integer
+          required: true
+        - name: client_host
+          display_name: "Restore to Client"
+          description: "Select the client host where files should be restored"
+          type: variant
+          required: true
+          source:
+            type: builtin
+            name: host
+            args:
+              predicate: and
+              args:
+                - predicate: in_service
+                  args:
+                    service: client
+        - name: restore_path
+          display_name: "Restore Path"
+          description: "Directory path on the client where files will be restored (will be created if not exists)"
+          type: string
+          required: true
+          default: "/tmp/bacula_restore"
+
+    Add_client:
+      display_name: "Add Сlient"
+      description: "Install Bacula File Daemon on selected hosts and register them in Director for backup operations"
+      states:
+        available: 
+          - installed
+        on_success: installed
+      scripts:
+        - name: Add client
+          script_type: ansible
+          script: ansible/add_client.yaml
+        - name: Register new clients on Director
+          script_type: ansible
+          script: ansible/add_client_reg_in_dir.yaml
+      hc_acl:
+      -
+        service: client
+        component: client
+        action: add
+    Remove_client:
+      display_name: "Remove Сlient"
+      description: "Uninstall Bacula File Daemon from selected hosts and remove all related configurations, jobs, and schedules from Director"
+      states:
+        available: 
+          - installed
+        on_success: installed
+      scripts:        
+        - name: Remove clients on Director
+          script_type: ansible
+          script: ansible/remove_client_in_dir.yaml
+        - name: Remove client
+          script_type: ansible
+          script: ansible/remove_client.yaml
+      hc_acl:
+      -
+        service: client
+        component: client
+        action: remove
+    Add_storage:
+      display_name: "Add Storage"
+      description: "Install Bacula Storage Daemon on selected hosts for storing backup volumes"
+      states:
+        available: 
+          - installed
+        on_success: installed
+      scripts:
+        - name: Add storage
+          script_type: ansible
+          script: ansible/add_storage.yaml
+        - name: Register new storage on Director
+          script_type: ansible
+          script: ansible/add_storage_reg_in_dir.yaml
+      hc_acl:
+      -
+        service: storage
+        component: storage
+        action: add
+    Remove_storage:
+      display_name: "Remove Storage"
+      description: "Uninstall Bacula Storage Daemon from selected hosts and remove all related configurations, jobs, and schedules from Director"
+      states:
+        available: 
+          - installed
+        on_success: installed
+      scripts:
+        - name: Remove storage on Director
+          script_type: ansible
+          script: ansible/remove_storage_in_dir.yaml
+        - name: Remove storage
+          script_type: ansible
+          script: ansible/remove_storage.yaml
+      hc_acl:
+      -
+        service: storage
+        component: storage
+        action: remove
+    Create_Backup_Job:
+      display_name: "Create Backup Job"
+      description: "Create a new backup job with schedule, linking a client fileset to a storage destination"
+      states:
+        available: 
+          - installed
+      scripts:
+        - name: Create Backup Job
+          script_type: ansible
+          script: ansible/create_job.yaml
+      config:
+        - name: job_name
+          display_name: "Job Name"
+          pattern: "^[a-zA-Z0-9_-]+$"
+          type: string
+          description: "Unique name for the backup job (e.g., Backup_WebServer, Daily_Database)"
+        - name: Backup_level
+          display_name: Backup level
+          type: variant
+          description: "Backup level: Full (complete backup), Incremental (only changed files since last backup), or Differential (changed files since last full backup)"
+          source:
+            type: inline
+            strict: true
+            value:
+              - Full
+              - Incremental
+              - Differential
+
+        - name: client_host
+          display_name: "Restore to Client"
+          type: variant
+          description: "Select the client host whose files will be backed up"
+          source:
+            type: builtin
+            name: host
+            args:
+              predicate: and
+              args:
+                - predicate: in_service
+                  args:
+                    service: client
+        
+        - name: storage_host
+          display_name: Storage host
+          type: variant
+          description: "Select the storage host where backup volumes will be stored"
+          source:
+            type: builtin
+            name: host
+            args:
+              predicate: and
+              args:
+                - predicate: in_service
+                  args:
+                    service: storage
+        - name: messages_name
+          display_name: Messages name
+          type: variant
+          description: "Message profile for job notifications: Standard (log to file and console) or Daemon (technical logs)"
+          source:
+            type: inline
+            strict: true
+            value:
+              - Standard
+              - Daemon
+          default: Standard
+        - name: schedule
+          display_name: Schedule
+          type: group
+          description: "Define when the backup job should run automatically"
+          subs:
+            - name: Frequency
+              type: selection_group
+              description: "Select the frequency of backup execution"
+              subs:
+                - name: daily
+                  display_name: Daily
+                  type: group
+                  description: "Running a task daily"
+                  subs: 
+                    - name: dummy
+                      type: string
+                      required: false
+                      ui_options:
+                        invisible: true
+                - name: hourly 
+                  display_name: Hourly
+                  description: "Running a task hourly"
+                  type: group
+                  subs: 
+                    - name: dummy
+                      type: string
+                      required: false
+                      ui_options:
+                        invisible: true
+                - name: weekly  
+                  display_name: Weekly
+                  description: "Running a task every week"
+                  type: group
+                  subs: 
+                    - name: day
+                      display_name: Day
+                      type: variant
+                      description: "Day of the week for weekly backup"
+                      source:
+                        type: inline
+                        strict: true
+                        value:
+                          - Sun
+                          - Mon
+                          - Tue
+                          - Wed
+                          - Thu
+                          - Fri
+                          - Sat
+                - name: monthly 
+                  display_name: Monthly  
+                  type: group
+                  description: "Running a task monthly"
+                  subs: 
+                    - name: day_selector
+                      display_name: Day selector 
+                      type: selection_group
+                      description: "Select how to specify the day of month"
+                      subs:
+                        - name: day_of_month
+                          display_name: Day of month
+                          description: "Specify exact day of month (1-31)"
+                          type: group
+                          subs:
+                            - name: day
+                              type: integer
+                              description: "Day of the month (1-31)"
+                              min: 1
+                              max: 31
+                        - name: day_of_week
+                          display_name: Day of week
+                          type: group
+                          description: "Specify day by week number and weekday"
+                          subs:                          
+                            - name: monthly_weekday
+                              display_name: Day week
+                              type: variant
+                              description: "Day of the week"
+                              source:
+                                type: inline
+                                strict: true
+                                value:
+                                  - Sun
+                                  - Mon
+                                  - Tue
+                                  - Wed
+                                  - Thu
+                                  - Fri
+                                  - Sat                           
+                            - name: monthly_week
+                              display_name: Week number
+                              type: variant
+                              description: "Week number in the month"
+                              source:
+                                type: inline
+                                strict: true
+                                value:
+                                  - 1st
+                                  - 2nd
+                                  - 3rd
+                                  - 4th
+                                  - 5th
+                                  - last
+                - name: mon_fri 
+                  display_name: Monday - Friday  
+                  type: group
+                  description: "Running a task Monday through Friday"
+                  subs: 
+                    - name: dummy
+                      type: string
+                      required: false
+                      ui_options:
+                        invisible: true
+                - name: mon_sat   
+                  display_name: Monday - Saturday
+                  type: group
+                  description: "Running a task Monday through Saturday"
+                  subs: 
+                    - name: dummy
+                      type: string
+                      required: false
+                      ui_options:
+                        invisible: true
+            - name: Time
+              type: string
+              description: "Run time in format HH:MM (e.g., 02:00 for 2 AM)"
+              pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+  
+    List_jobs:
+      display_name: "List Jobs"
+      description: "Display all job categories: running, scheduled, terminated, disabled, and full history. Optionally filter by job name."
+      states:
+        available:
+          - installed
+      scripts:
+        - name: List Jobs
+          script_type: ansible
+          script: ansible/list_jobs.yaml
+      config:
+        - name: job_name
+          display_name: "Job Name"
+          description: "Filter results by job name. Leave empty to show all jobs."
+          type: string
+          required: false
+          pattern: "^[a-zA-Z0-9_-]+$"
+    
+    List_storage:
+      display_name: "List Storage"
+      description: "Display list of storage daemons with their volumes and disk usage"
+      states:
+        available: 
+          - installed
+      scripts:
+        - name: List Storage
+          script_type: ansible
+          script: ansible/list_storage.yaml
+
+    List_clients:
+      display_name: "List Clients"
+      description: "Display list of clients with their backup paths"
+      states:
+        available: 
+          - installed
+      scripts:
+        - name: List Clients
+          script_type: ansible
+          script: ansible/list_clients.yaml
+
+
+    Cancel_job:
+      display_name: "Cancel Job"
+      description: "Cancel a currently running backup job by its name"
+      states:
+        available: 
+          - installed
+      scripts:
+        - name: Cancel job
+          script_type: ansible
+          script: ansible/cancel_job.yaml
+      config:
+        - name: job_name
+          display_name: Job Name
+          type: string
+          description: "Name of the backup job to delete from catalog"
+          pattern: "^[a-zA-Z0-9_-]+$"
+    Delete_job:
+      display_name: "Delete Job"
+      description: "Permanently delete backup job records from the catalog database (irreversible action)"
+      states:
+        available: 
+          - installed
+      scripts:
+        - name: Delete job
+          script_type: ansible
+          script: ansible/delete_job.yaml
+      config:
+        - name: job_name
+          display_name: Job Name
+          type: string
+          description: "Name of the backup job to delete from catalog"
+          pattern: "^[a-zA-Z0-9_-]+$"
+  config:
+    - name: __main_info
+      type: file
+      default:  Bacula.html
+      
+
+  
+- name: director 
+  display_name: Director 
+  type: service
+  required: true
+  description: "Bacula Director daemon - central management component that coordinates backup, restore, and verification operations"
+  version: 1
+  venv: *venv_cluster
+  flag_autogeneration:
+    enable_outdated_config: True
+  requires:
+    - service: postgresql
+    - service: storage
+    - service: client
+  components:
+    director:
+      constraint: [1]
+      display_name: Director
+  config:
+    - name: dir_port  
+      display_name: Port number
+      description: "TCP port number for Director daemon to listen for client connections"
+      type: integer
+      required: true
+      writable: [created]
+      default: 9101
+    - name: working_directory  
+      display_name: Working Directory 
+      description: "Directory where Director stores working files and temporary data"
+      type: string
+      required: true
+      writable: [created]
+      default: "/var/lib/bacula"
+    - name: pid_directory   
+      display_name: Pid Directory  
+      description: "Directory where Director stores its PID file for process management"
+      type: string
+      required: true
+      writable: [created]
+      default: "/var/run/bacula"
+    - name: max_concurrent_jobs   
+      display_name: Maximum Concurrent Jobs  
+      description: "Maximum number of backup jobs that can run simultaneously on this Director"
+      type: integer
+      required: true
+      writable: [created]
+      default: 10
+    - name: bacula_dir_pw  
+      display_name: Director password
+      description: "Password for authenticating connections to the Director daemon"
+      type: password
+      required: true
+      writable: [created]
+  actions:
+    Status:
+      display_name: "Status"
+      description: "Display the current status of the Director daemon, including running jobs, scheduled jobs, terminated jobs, and device status"
+      states:
+        available:
+          - installed
+        on_success: installed
+      scripts:
+        - name: "Get Director Status"
+          script_type: ansible
+          script: ansible/director_status.yaml
+
+- name: postgresql
+  display_name: PostgreSQL
+  type: service
+  required: true
+  description: "PostgreSQL database service for storing Bacula catalog (backup metadata, job history, and file records)"
+  version: 1
+  venv: *venv_cluster
+  flag_autogeneration:
+    enable_outdated_config: True
+  components:
+    postgresql:
+      constraint: [1]
+      display_name: PostgreSQL
+
+  config:
+    - name: postgresql_user 
+      display_name: Username
+      description: "Database username for Bacula catalog connection"
+      type: string
+      required: true
+      writable: [created]
+      default: "bacula"
+    - name: postgresql_password  
+      display_name: Password
+      description: "Password for the Bacula database user"
+      type: password
+      required: true
+      writable: [created]
+    - name: postgresql_dbname  
+      display_name: Database name
+      description: "Name of the PostgreSQL database for Bacula catalog"
+      type: string
+      required: true
+      writable: [created]
+      default: "bacula"
+
+- name: storage
+  display_name: Storage
+  type: service
+  required: true
+  description: "Bacula Storage Daemon service - manages backup volumes and provides storage destinations for backup data"
+  version: 1
+  venv: *venv_cluster
+  flag_autogeneration:
+    enable_outdated_config: True
+  components:
+    storage:
+      constraint: [1,+]
+      display_name: Storage
+  
+  config:
+    - name: devices
+      display_name: Volumes directory
+      description: "Map of storage devices where key is device name and value is the filesystem path for storing backup volumes (supports multiple devices per host)"
+      type: map
+      required: true
+      default: 
+        FileStorage-1: /var/lib/bacula/volumes    
+      group_customization: true
+  actions:
+    Reconfig:
+      display_name: "Reconfig"
+      description: "Synchronize storage device configurations to Director, creating or updating Storage and Device blocks for all hosts in the service"
+      scripts:
+        - name: "Reconfig Storage"
+          script_type: ansible
+          script: ansible/reconfig_storage.yaml
+      states:
+        available: any
+        on_success: installed
+
+      
+- name: client
+  display_name: Client
+  type: service
+  required: true
+  description: "Bacula File Daemon service - agent installed on client hosts to provide file access for backup operations"
+  version: 1
+  venv: *venv_cluster
+  flag_autogeneration:
+    enable_outdated_config: True
+  components:
+    client:
+      constraint: [1,+]
+      display_name: Client
+  config:
+    - name: Paths
+      type: list
+      description: "List of file system paths to include in backup for this client (e.g., /etc, /var/www, /home)"
+      group_customization: true
+      default: 
+         - "/home/adcm"
+  actions:
+    Reconfig:
+      display_name: "Reconfig"
+      description: "Synchronize fileset configurations to Director, creating or updating FileSet blocks with backup paths for all hosts in the service"
+      scripts:
+        - name: "Reconfig client"
+          script_type: ansible
+          script: ansible/reconfig_client.yaml
+      states:
+        available: any
+        on_success: installed

@@ -1,0 +1,28 @@
+---
+- name: Remove Bacula File Daemon from hosts
+  hosts: client.client.remove
+  become: yes
+  gather_facts: false
+
+  tasks:
+    - name: Stop File Daemon
+      service:
+        name: bacula-fd
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove Bacula client package
+      apt:
+        name: bacula-client
+        state: absent
+        purge: yes
+
+    - name: Remove Bacula configuration directory
+      file:
+        path: /etc/bacula
+        state: absent
+
+    - name: Remove Bacula working directory
+      file:
+        path: /var/lib/bacula
+        state: absent

@@ -1,0 +1,212 @@
+---
+- name: List Bacula Jobs
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    job_name_filter: "{{ job.config.job_name | default('') }}"
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+
+  tasks:
+    - name: Get all jobs from catalog
+      shell: 'echo "list jobs" | bconsole 2>&1'
+      register: all_jobs_raw
+      changed_when: false
+
+    - name: Get Director status (full output)
+      shell: 'echo "status director" | bconsole 2>&1'
+      register: director_status_raw
+      changed_when: false
+
+    - name: Get running jobs list
+      shell: 'echo "status director" | bconsole 2>&1 | grep -A 50 "Running Jobs:" | grep -v "====\|Running Jobs:\|No Jobs running" | sed "/^$/d" | awk "{print}"'
+      register: running_jobs_raw
+      changed_when: false
+
+    - name: Get terminated jobs list (successful)
+      shell: 'echo "list jobs" | bconsole 2>&1 | grep -E "B\|.*T\s*$"'
+      register: terminated_ok_raw
+      changed_when: false
+
+    - name: Get terminated jobs list (errors)
+      shell: 'echo "list jobs" | bconsole 2>&1 | grep -E "B\|.*[^T]\s*$" | grep -v "JobId"'
+      register: terminated_error_raw
+      changed_when: false
+
+    - name: Extract all job names from config
+      shell: "awk '/Job\\s*\\{/ {flag=1} flag && /Name\\s*=\\s*\"/ {print $3; flag=0}' {{ bacula_dir_conf }} | tr -d '\"'"
+      register: config_jobs_raw
+      changed_when: false
+
+    - name: Set all config jobs list
+      set_fact:
+        all_config_jobs: "{{ config_jobs_raw.stdout_lines | default([]) }}"
+
+    - name: Find job names with Enabled = no
+      shell: "awk '/Job\\s*\\{/ {flag=1} flag && /Enabled\\s*=\\s*no/ {print; flag=0}' {{ bacula_dir_conf }} | grep -o 'Name\\s*=\\s*\"[^\"]*\"' | cut -d'\"' -f2"
+      register: disabled_jobs_raw
+      changed_when: false
+
+    - name: Set disabled job names list
+      set_fact:
+        disabled_jobs: "{{ disabled_jobs_raw.stdout_lines | default([]) }}"
+
+    - name: Clean all jobs output
+      set_fact:
+        all_jobs: "{{ all_jobs_raw.stdout_lines | reject('match', '^(Connecting to|1000 OK|Enter a period|Automatically selected|Using Catalog|list jobs|No results|JobId|-----)') | reject('match', '^\\s*$') | list }}"
+
+    - name: Clean director status output
+      set_fact:
+        director_status_clean: "{{ director_status_raw.stdout_lines | reject('match', '^(Connecting to|1000 OK|Enter a period)') | list }}"
+
+    - name: Clean running jobs output
+      set_fact:
+        running_jobs_clean: "{{ running_jobs_raw.stdout_lines | reject('match', '^\\s*$') | list }}"
+
+    - name: Clean terminated OK jobs output
+      set_fact:
+        terminated_ok: "{{ terminated_ok_raw.stdout_lines | list }}"
+
+    - name: Clean terminated error jobs output
+      set_fact:
+        terminated_error: "{{ terminated_error_raw.stdout_lines | list }}"
+
+    - name: Save director status to temp file
+      copy:
+        content: "{{ director_status_clean | join('\n') }}"
+        dest: /tmp/status_director.txt
+        mode: '0644'
+
+    - name: Extract Scheduled Jobs section from status file
+      shell: |
+        sed -n '/Scheduled Jobs:/,/====/p' /tmp/status_director.txt | grep -v '^====' | grep -v '^Scheduled Jobs:' | grep -v '^Level' | grep -v '^===' | sed '/^$/d'
+      register: scheduled_section_raw
+      changed_when: false
+
+    - name: Set scheduled jobs lines
+      set_fact:
+        scheduled_lines: "{{ scheduled_section_raw.stdout_lines | default([]) }}"
+
+    - name: Count scheduled jobs (lines with actual job data)
+      set_fact:
+        scheduled_count: "{{ scheduled_lines | select('match', '^\\s*[A-Za-z]+\\s+[A-Za-z]+\\s+\\d+\\s+.*') | list | length }}"
+
+    - name: Remove temp file
+      file:
+        path: /tmp/status_director.txt
+        state: absent
+
+    - name: Filter all jobs by name (when filter set)
+      set_fact:
+        all_jobs: "{{ all_jobs | select('search', job_name_filter) | list }}"
+      when: job_name_filter | length > 0
+
+    - name: Filter scheduled section by name (when filter set)
+      set_fact:
+        scheduled_lines: "{{ scheduled_lines | select('search', job_name_filter) | list }}"
+      when: job_name_filter | length > 0
+
+    - name: Filter running jobs by name (when filter set)
+      set_fact:
+        running_jobs_clean: "{{ running_jobs_clean | select('search', job_name_filter) | list }}"
+      when: job_name_filter | length > 0
+
+    - name: Filter disabled jobs by name (when filter set)
+      set_fact:
+        disabled_jobs: "{{ disabled_jobs | select('search', job_name_filter) | list }}"
+      when: job_name_filter | length > 0
+
+    - name: Filter all config jobs by name (when filter set)
+      set_fact:
+        all_config_jobs: "{{ all_config_jobs | select('search', job_name_filter) | list }}"
+      when: job_name_filter | length > 0
+
+    - name: Filter terminated OK jobs by name (when filter set)
+      set_fact:
+        terminated_ok: "{{ terminated_ok | select('search', job_name_filter) | list }}"
+      when: job_name_filter | length > 0
+
+    - name: Filter terminated error jobs by name (when filter set)
+      set_fact:
+        terminated_error: "{{ terminated_error | select('search', job_name_filter) | list }}"
+      when: job_name_filter | length > 0
+
+    - name: Display full job report
+      debug:
+        msg: |
+          ========================================
+          BACULA JOBS OVERVIEW
+          Filter: {% if job_name_filter %}"{{ job_name_filter }}"{% else %}(none — showing all jobs){% endif %}
+          ========================================
+
+          ========================================
+          1. ALL JOBS IN CONFIG ({{ all_config_jobs | length }})
+          ========================================
+          {% if all_config_jobs | length > 0 %}
+          {% for job in all_config_jobs %}
+            - {{ job }}
+          {% endfor %}
+          {% else %}
+          (no jobs in config)
+          {% endif %}
+
+          ========================================
+          2. RUNNING JOBS ({{ running_jobs_clean | length }})
+          ========================================
+          {% if running_jobs_clean | length > 0 %}
+          {% for line in running_jobs_clean %}
+          {{ line }}
+          {% endfor %}
+          {% else %}
+          (no running jobs)
+          {% endif %}
+
+          ========================================
+          3. SCHEDULED JOBS — waiting to run ({{ scheduled_count }})
+          ========================================
+          {% if scheduled_lines | length > 0 %}
+          {% for line in scheduled_lines %}
+          {{ line }}
+          {% endfor %}
+          {% else %}
+          (no scheduled jobs)
+          {% endif %}
+
+          ========================================
+          4. TERMINATED JOBS — completed successfully ({{ terminated_ok | length }})
+          ========================================
+          {% if terminated_ok | length > 0 %}
+          {{ terminated_ok | join('\n') }}
+          {% else %}
+          (no successfully terminated jobs)
+          {% endif %}
+
+          ========================================
+          5. TERMINATED JOBS — with errors ({{ terminated_error | length }})
+          ========================================
+          {% if terminated_error | length > 0 %}
+          {{ terminated_error | join('\n') }}
+          {% else %}
+          (no jobs terminated with errors)
+          {% endif %}
+
+          ========================================
+          6. DISABLED JOBS — removed from schedule ({{ disabled_jobs | length }})
+          ========================================
+          {% if disabled_jobs | length > 0 %}
+          {% for job in disabled_jobs %}
+            - {{ job }}
+          {% endfor %}
+          {% else %}
+          (no disabled jobs)
+          {% endif %}
+
+          ========================================
+          7. FULL JOB HISTORY ({{ all_jobs | length }} records)
+          ========================================
+          {% if all_jobs | length > 0 %}
+          {{ all_jobs | join('\n') }}
+          {% else %}
+          No results to list.
+          {% endif %}
+          ========================================

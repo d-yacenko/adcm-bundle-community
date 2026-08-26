@@ -1,0 +1,588 @@
+<div class="bacula-wrapper">
+
+  <!-- Header -->
+  <div class="bacula-header">
+    <div class="bacula-header-icon">🛡️</div>
+    <div class="bacula-header-text">
+      <h1>Bacula Cluster</h1>
+      <div class="bacula-version">v15.0.3_231</div>
+    </div>
+  </div>
+
+  <!-- About Bacula -->
+  <h3 class="bacula-section-title">📖 About Bacula</h3>
+  <div class="bacula-description">
+    <p>
+      <strong>Bacula</strong> is a cross-platform enterprise‑grade backup and recovery system.
+      It enables you to schedule backups of files, databases, system images, and more.
+      With Bacula you can:
+    </p>
+    <ul>
+      <li>Define backup jobs with flexible schedules (daily, weekly, monthly, etc.)</li>
+      <li>Back up data from multiple clients to one or more storage hosts</li>
+      <li>Restore files to any client from any backup job</li>
+      <li>Monitor job status, disk usage, and backup history</li>
+    </ul>
+  </div>
+
+  <!-- Architecture -->
+  <h3 class="bacula-section-title">🏛️ Architecture</h3>
+  <div class="bacula-schema">
+    <div class="bacula-schema-row">
+      <div class="bacula-node">
+        <span class="bacula-node-icon">🐘</span>
+        <div class="bacula-node-name">PostgreSQL</div>
+        <div class="bacula-node-desc">Catalog (DB)</div>
+      </div>
+      <span class="bacula-arrow">⟷</span>
+      <div class="bacula-node">
+        <span class="bacula-node-icon">🧠</span>
+        <div class="bacula-node-name">Director</div>
+        <div class="bacula-node-desc">Job Controller</div>
+      </div>
+    </div>
+    <div class="bacula-arrow-down">⬇</div>
+    <div class="bacula-schema-row">
+      <div class="bacula-node">
+        <span class="bacula-node-icon">💾</span>
+        <div class="bacula-node-name">Storage</div>
+        <div class="bacula-node-desc">Volume Store</div>
+      </div>
+      <span class="bacula-arrow">⟷</span>
+      <div class="bacula-node">
+        <span class="bacula-node-icon">🖥️</span>
+        <div class="bacula-node-name">Client</div>
+        <div class="bacula-node-desc">File Daemon</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="bacula-actions">
+    <h2 class="bacula-actions-title">⚡ Available Actions (ADCM)</h2>
+
+    <!-- Installation / Removal -->
+    <div class="bacula-action-group">
+      <div class="bacula-group-title">🏗️ Infrastructure Management</div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-green">Install</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Install Cluster</div>
+          <div class="bacula-action-text">
+            Sequential installation of all components: <strong>PostgreSQL → Client → Storage → Director</strong>.<br>
+            After installation, Director automatically registers existing Clients and Storage.<br>
+            <strong>Backup Job Creation:</strong> During installation, a backup job is created for each Client, linking it to the selected Storage host. This ensures that every Client is immediately ready for backup operations.
+          </div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-orange">Add client</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Add Client</div>
+          <div class="bacula-action-text">Install File Daemon on selected hosts and register them in Director.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-red">Remove client</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Remove Client</div>
+          <div class="bacula-action-text">Uninstall File Daemon and remove all related configurations, jobs, and schedules from Director.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-orange">Add Storage</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Add Storage</div>
+          <div class="bacula-action-text">Install Storage Daemon on selected hosts and register it in Director.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-red">Remove Storage</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Remove Storage</div>
+          <div class="bacula-action-text">Uninstall Storage Daemon and remove all related configurations, jobs, and schedules from Director.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Job Management -->
+    <div class="bacula-action-group">
+      <div class="bacula-group-title">📋 Backup Job Management</div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-blue">Create Backup Job</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Create Backup Job</div>
+          <div class="bacula-action-text">Create a new backup job with schedule, linking a client fileset to a storage destination.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-blue">Run Job</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Run Job</div>
+          <div class="bacula-action-text">Manually run a backup job outside its schedule.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-orange">Disable Job</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Disable Job</div>
+          <div class="bacula-action-text">Disable a job — it remains in config but won't run on schedule. Can still be started manually.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-green">Enable Job</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Enable Job</div>
+          <div class="bacula-action-text">Re‑enable a previously disabled job — it will resume scheduled runs.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-purple">Restore Job</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Restore Job</div>
+          <div class="bacula-action-text">Restore files from a backup job to a specified client and path.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-red">Cancel job</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Cancel Job</div>
+          <div class="bacula-action-text">Cancel a currently running backup job.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-red">Delete job</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Delete Job</div>
+          <div class="bacula-action-text">Permanently delete job records from the catalog (irreversible).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Informational Actions -->
+    <div class="bacula-action-group">
+      <div class="bacula-group-title">📊 Informational Actions</div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-gray">Job Status</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Job Status</div>
+          <div class="bacula-action-text">Display detailed job information: status, files, bytes, volumes, and errors.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-gray">List Jobs</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">List Jobs</div>
+          <div class="bacula-action-text">Show all job categories: running, scheduled, terminated, disabled, and full history. Optional filter by job name.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-gray">List Storage</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">List Storage</div>
+          <div class="bacula-action-text">Display storage daemons with their volumes and disk usage.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-gray">List Clients</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">List Clients</div>
+          <div class="bacula-action-text">Display clients with their backup paths.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service‑level actions -->
+    <div class="bacula-action-group">
+      <div class="bacula-group-title">🔄 Service‑level Actions</div>
+
+      <!-- Configuration note inside the group, before actions -->
+      <div class="bacula-config-note">
+        <strong>⚙️ Configuration Management:</strong>
+        Before using the service‑level actions below, you need to define the backup paths for each client and the storage devices for each storage host.
+        This is done via configuration groups in ADCM:
+        <ul>
+          <li>For each <strong>Client</strong>, specify the list of directories to back up (Fileset).</li>
+          <li>For each <strong>Storage</strong>, define the device name and the corresponding filesystem path for storing backup volumes.</li>
+        </ul>
+        After updating the configuration, run the <strong>Reconfig</strong> action for the respective service (Client or Storage) to apply the changes to the Director.
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-teal">Storage → Reconfig</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Reconfigure Storage</div>
+          <div class="bacula-action-text">Synchronise storage device configurations to Director, creating or updating Storage and Device blocks for all hosts in the service.</div>
+        </div>
+      </div>
+
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-teal">Client → Reconfig</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Reconfigure Client</div>
+          <div class="bacula-action-text">Synchronise fileset configurations to Director, creating or updating FileSet blocks with backup paths for all hosts in the service.</div>
+        </div>
+      </div>
+      <div class="bacula-action-item">
+        <span class="bacula-badge bacula-badge-teal">Director → Status</span>
+        <div class="bacula-action-desc">
+          <div class="bacula-action-title">Status</div>
+          <div class="bacula-action-text">Display the current status of the Director daemon, including running jobs, scheduled jobs, terminated jobs, and device status.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="bacula-footer">
+    Documentation: <a href="https://www.bacula.org/documentation/" target="_blank">bacula.org</a> &nbsp;|&nbsp; Managed via ADCM
+  </div>
+</div>
+
+<style>
+  /* Базовые стили для светлой темы */
+  .bacula-wrapper {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    color: #1a202c;
+    background: transparent;
+    padding: 0;
+  }
+  .bacula-wrapper * {
+    box-sizing: border-box;
+  }
+  .bacula-wrapper h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0 0 4px 0;
+  }
+  .bacula-wrapper .bacula-version {
+    font-size: 14px;
+    color: #4a5568;
+  }
+  .bacula-wrapper .bacula-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 14px;
+  }
+  .bacula-wrapper .bacula-header-icon {
+    font-size: 32px;
+  }
+  .bacula-wrapper .bacula-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0 0 8px 0;
+  }
+  .bacula-wrapper .bacula-description {
+    background: #f7fafc;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    border: 1px solid #e2e8f0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #2d3748;
+  }
+  .bacula-wrapper .bacula-description ul {
+    margin: 8px 0 0 20px;
+    padding: 0;
+  }
+  .bacula-wrapper .bacula-description li {
+    margin-bottom: 4px;
+  }
+  .bacula-wrapper .bacula-schema {
+    background: #f7fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 16px 12px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .bacula-wrapper .bacula-schema-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 16px 24px;
+  }
+  .bacula-wrapper .bacula-node {
+    background: white;
+    border: 2px solid #cbd5e0;
+    border-radius: 10px;
+    padding: 8px 14px;
+    min-width: 80px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .bacula-wrapper .bacula-node-icon {
+    font-size: 24px;
+    display: block;
+  }
+  .bacula-wrapper .bacula-node-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #2d3748;
+  }
+  .bacula-wrapper .bacula-node-desc {
+    font-size: 12px;
+    color: #4a5568;
+  }
+  .bacula-wrapper .bacula-arrow {
+    font-size: 20px;
+    color: #a0aec0;
+  }
+  .bacula-wrapper .bacula-arrow-down {
+    font-size: 22px;
+    color: #a0aec0;
+    line-height: 1;
+  }
+  .bacula-wrapper .bacula-actions-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a202c;
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .bacula-wrapper .bacula-action-group {
+    margin-bottom: 20px;
+  }
+  .bacula-wrapper .bacula-group-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 8px;
+    padding-left: 10px;
+    border-left: 3px solid #4299e1;
+  }
+  .bacula-wrapper .bacula-action-item {
+    background: #f7fafc;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .bacula-wrapper .bacula-action-item:hover {
+    background: #edf2f7;
+  }
+  .bacula-wrapper .bacula-badge {
+    font-weight: 600;
+    font-size: 12px;
+    padding: 2px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+    color: white;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .bacula-wrapper .bacula-badge-green { background: #48bb78; }
+  .bacula-wrapper .bacula-badge-blue { background: #4299e1; }
+  .bacula-wrapper .bacula-badge-orange { background: #ed8936; }
+  .bacula-wrapper .bacula-badge-purple { background: #9f7aea; }
+  .bacula-wrapper .bacula-badge-red { background: #fc8181; }
+  .bacula-wrapper .bacula-badge-teal { background: #38b2ac; }
+  .bacula-wrapper .bacula-badge-gray { background: #718096; }
+
+  .bacula-wrapper .bacula-action-desc { flex: 1; }
+  .bacula-wrapper .bacula-action-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: #2d3748;
+  }
+  .bacula-wrapper .bacula-action-text {
+    font-size: 13.5px;
+    color: #4a5568;
+    margin-top: 3px;
+    line-height: 1.5;
+  }
+  .bacula-wrapper .bacula-config-note {
+    background: #edf2f7;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    border-left: 4px solid #4299e1;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #2d3748;
+  }
+  .bacula-wrapper .bacula-config-note ul {
+    margin: 6px 0 0 20px;
+    padding: 0;
+  }
+  .bacula-wrapper .bacula-config-note li {
+    margin-bottom: 2px;
+  }
+  .bacula-wrapper .bacula-footer {
+    margin-top: 20px;
+    font-size: 13px;
+    color: #4a5568;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 14px;
+    text-align: center;
+  }
+  .bacula-wrapper .bacula-footer a {
+    color: #3182ce;
+    text-decoration: none;
+  }
+  .bacula-wrapper .bacula-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* Адаптация для тёмной темы ADCM */
+  .adcm-theme-dark .bacula-wrapper,
+  .theme-dark .bacula-wrapper,
+  [data-theme="dark"] .bacula-wrapper {
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper h1,
+  .theme-dark .bacula-wrapper h1,
+  [data-theme="dark"] .bacula-wrapper h1 {
+    color: #f7fafc;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-header,
+  .theme-dark .bacula-wrapper .bacula-header,
+  [data-theme="dark"] .bacula-wrapper .bacula-header {
+    border-color: #4a5568;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-version,
+  .theme-dark .bacula-wrapper .bacula-version,
+  [data-theme="dark"] .bacula-wrapper .bacula-version {
+    color: #a0aec0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-section-title,
+  .theme-dark .bacula-wrapper .bacula-section-title,
+  [data-theme="dark"] .bacula-wrapper .bacula-section-title {
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-description,
+  .theme-dark .bacula-wrapper .bacula-description,
+  [data-theme="dark"] .bacula-wrapper .bacula-description {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-description ul,
+  .theme-dark .bacula-wrapper .bacula-description ul,
+  [data-theme="dark"] .bacula-wrapper .bacula-description ul {
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-schema,
+  .theme-dark .bacula-wrapper .bacula-schema,
+  [data-theme="dark"] .bacula-wrapper .bacula-schema {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-node,
+  .theme-dark .bacula-wrapper .bacula-node,
+  [data-theme="dark"] .bacula-wrapper .bacula-node {
+    background: #1a202c;
+    border-color: #4a5568;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-node-name,
+  .theme-dark .bacula-wrapper .bacula-node-name,
+  [data-theme="dark"] .bacula-wrapper .bacula-node-name {
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-node-desc,
+  .theme-dark .bacula-wrapper .bacula-node-desc,
+  [data-theme="dark"] .bacula-wrapper .bacula-node-desc {
+    color: #a0aec0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-arrow,
+  .adcm-theme-dark .bacula-wrapper .bacula-arrow-down,
+  .theme-dark .bacula-wrapper .bacula-arrow,
+  .theme-dark .bacula-wrapper .bacula-arrow-down,
+  [data-theme="dark"] .bacula-wrapper .bacula-arrow,
+  [data-theme="dark"] .bacula-wrapper .bacula-arrow-down {
+    color: #718096;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-actions-title,
+  .theme-dark .bacula-wrapper .bacula-actions-title,
+  [data-theme="dark"] .bacula-wrapper .bacula-actions-title {
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-group-title,
+  .theme-dark .bacula-wrapper .bacula-group-title,
+  [data-theme="dark"] .bacula-wrapper .bacula-group-title {
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-action-item,
+  .theme-dark .bacula-wrapper .bacula-action-item,
+  [data-theme="dark"] .bacula-wrapper .bacula-action-item {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-action-item:hover,
+  .theme-dark .bacula-wrapper .bacula-action-item:hover,
+  [data-theme="dark"] .bacula-wrapper .bacula-action-item:hover {
+    background: #4a5568;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-action-title,
+  .theme-dark .bacula-wrapper .bacula-action-title,
+  [data-theme="dark"] .bacula-wrapper .bacula-action-title {
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-action-text,
+  .theme-dark .bacula-wrapper .bacula-action-text,
+  [data-theme="dark"] .bacula-wrapper .bacula-action-text {
+    color: #cbd5e0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-config-note,
+  .theme-dark .bacula-wrapper .bacula-config-note,
+  [data-theme="dark"] .bacula-wrapper .bacula-config-note {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-config-note ul,
+  .theme-dark .bacula-wrapper .bacula-config-note ul,
+  [data-theme="dark"] .bacula-wrapper .bacula-config-note ul {
+    color: #e2e8f0;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-footer,
+  .theme-dark .bacula-wrapper .bacula-footer,
+  [data-theme="dark"] .bacula-wrapper .bacula-footer {
+    color: #a0aec0;
+    border-color: #4a5568;
+  }
+  .adcm-theme-dark .bacula-wrapper .bacula-footer a,
+  .theme-dark .bacula-wrapper .bacula-footer a,
+  [data-theme="dark"] .bacula-wrapper .bacula-footer a {
+    color: #63b3ed;
+  }
+
+  /* small screens */
+  @media (max-width: 600px) {
+    .bacula-wrapper .bacula-schema-row { gap: 10px; }
+    .bacula-wrapper .bacula-node { min-width: 60px; padding: 6px 10px; }
+    .bacula-wrapper .bacula-action-item { flex-wrap: wrap; }
+  }
+</style>

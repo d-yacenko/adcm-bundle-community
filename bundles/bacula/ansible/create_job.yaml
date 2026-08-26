@@ -1,0 +1,238 @@
+---
+- name: Create Bacula Backup Job
+  hosts: director
+  become: yes
+  gather_facts: false
+  vars:
+    job_name: "{{ job.config.job_name }}"
+    job_level: "{{ job.config.Backup_level | default('Full') }}"
+    client_host: "{{ job.config.client_host }}"
+    storage_host: "{{ job.config.storage_host }}"
+    messages_name: "{{ job.config.messages_name | default('Standard') }}"
+    schedule_config: "{{ job.config.schedule }}"
+    file_set_name: "{{ client_host }}_fs"
+    storage_name: "{{ storage_host }}_sd"
+    schedule_name: "Schedule_{{ job_name }}"
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+
+  tasks:
+    # ==========================================
+    # Валидация параметров
+    # ==========================================
+    - name: Validate required parameters
+      fail:
+        msg: "Parameter '{{ item }}' is required but not provided."
+      when: item not in job.config or job.config[item] | length == 0
+      loop:
+        - job_name
+        - client_host
+        - storage_host
+
+    - name: Get client and storage info
+      set_fact:
+        client_ip: "{{ hostvars[client_host].ansible_host }}"
+        client_hostname: "{{ client_host }}"
+        storage_ip: "{{ hostvars[storage_host].ansible_host }}"
+        storage_hostname: "{{ storage_host }}"
+
+    # ==========================================
+    # Проверка существования FileSet и Storage
+    # ==========================================
+    - name: Check if FileSet exists on Director
+      shell: "grep -c 'Name = \"{{ file_set_name }}\"' {{ bacula_dir_conf }}"
+      register: fileset_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if FileSet not found
+      fail:
+        msg: |
+          FileSet '{{ file_set_name }}' not found on Director!
+          Please ensure the client '{{ client_host }}' is registered first.
+      when: fileset_check.stdout | int == 0
+
+    - name: Check if Storage exists on Director
+      shell: "grep -c 'Name = {{ storage_name }}' {{ bacula_dir_conf }}"
+      register: storage_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if Storage not found
+      fail:
+        msg: |
+          Storage '{{ storage_name }}' not found on Director!
+          Please ensure the storage '{{ storage_host }}' is registered first.
+      when: storage_check.stdout | int == 0
+
+    # ==========================================
+    # Формирование строки расписания
+    # ==========================================
+    - name: Initialize run string
+      set_fact:
+        run_string: "Run = {{ job_level }}"
+
+    - name: Add daily frequency
+      set_fact:
+        run_string: "{{ run_string }} daily"
+      when: schedule_config.Frequency._selection == 'daily'
+
+    - name: Add hourly frequency
+      set_fact:
+        run_string: "{{ run_string }} hourly"
+      when: schedule_config.Frequency._selection == 'hourly'
+
+    - name: Add weekly frequency
+      set_fact:
+        run_string: "{{ run_string }} {{ schedule_config.Frequency.weekly.day | lower }}"
+      when: schedule_config.Frequency._selection == 'weekly'
+
+    - name: Add monthly day_of_month frequency
+      set_fact:
+        run_string: "{{ run_string }} monthly {{ schedule_config.Frequency.monthly.day_selector.day_of_month.day }}"
+      when:
+        - schedule_config.Frequency._selection == 'monthly'
+        - schedule_config.Frequency.monthly.day_selector._selection == 'day_of_month'
+
+    - name: Add monthly day_of_week frequency
+      set_fact:
+        run_string: "{{ run_string }} monthly {{ schedule_config.Frequency.monthly.day_selector.day_of_week.monthly_week }} {{ schedule_config.Frequency.monthly.day_selector.day_of_week.monthly_weekday | lower }}"
+      when:
+        - schedule_config.Frequency._selection == 'monthly'
+        - schedule_config.Frequency.monthly.day_selector._selection == 'day_of_week'
+
+    - name: Add mon-fri frequency
+      set_fact:
+        run_string: "{{ run_string }} mon-fri"
+      when: schedule_config.Frequency._selection == 'mon_fri'
+
+    - name: Add mon-sat frequency
+      set_fact:
+        run_string: "{{ run_string }} mon-sat"
+      when: schedule_config.Frequency._selection == 'mon_sat'
+
+    - name: Add time to schedule string
+      set_fact:
+        run_string: "{{ run_string }} at {{ schedule_config.Time }}"
+
+    - name: Show generated schedule
+      debug:
+        msg: "Schedule run string: {{ run_string }}"
+
+    # ==========================================
+    # Формирование блоков через set_fact
+    # ==========================================
+    - name: Check if Schedule already exists
+      shell: "grep -c 'Name = \"{{ schedule_name }}\"' {{ bacula_dir_conf }}"
+      register: schedule_check
+      changed_when: false
+      failed_when: false
+
+    - name: Create Schedule block content
+      set_fact:
+        schedule_block: |
+          Schedule {
+            Name = "{{ schedule_name }}"
+            {{ run_string }}
+          }
+      when: schedule_check.stdout | int == 0
+
+    - name: Check if Job already exists
+      shell: "grep -c 'Name = \"{{ job_name }}\"' {{ bacula_dir_conf }}"
+      register: job_check
+      changed_when: false
+      failed_when: false
+
+    - name: Create Job block content
+      set_fact:
+        job_block: |
+          Job {
+            Name = "{{ job_name }}"
+            Type = Backup
+            Level = {{ job_level }}
+            Client = {{ client_hostname }}-fd
+            FileSet = "{{ file_set_name }}"
+            Schedule = "{{ schedule_name }}"
+            Storage = {{ storage_name }}
+            Pool = Default
+            Messages = {{ messages_name }}
+            Priority = 10
+            Write Bootstrap = "/var/lib/bacula/%c.bsr"
+          }
+      when: job_check.stdout | int == 0
+
+    # ==========================================
+    # Adding blocks to the config
+    # ==========================================
+    - name: Add Schedule block to config
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED SCHEDULE {{ schedule_name }}"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: "{{ schedule_block }}"
+      when: schedule_check.stdout | int == 0
+
+    - name: Add Job block to config
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED JOB {{ job_name }}"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: "{{ job_block }}"
+      when: job_check.stdout | int == 0
+
+    # ==========================================
+    # Validation and reboot
+    # ==========================================
+    - name: Validate Bacula Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+
+    - name: Rollback on validation failure
+      block:
+        - name: Remove Job block on failure
+          blockinfile:
+            path: "{{ bacula_dir_conf }}"
+            marker: "# {mark} ANSIBLE MANAGED JOB {{ job_name }}"
+            state: absent
+          when: job_check.stdout | int == 0
+
+        - name: Remove Schedule block on failure
+          blockinfile:
+            path: "{{ bacula_dir_conf }}"
+            marker: "# {mark} ANSIBLE MANAGED SCHEDULE {{ schedule_name }}"
+            state: absent
+          when: schedule_check.stdout | int == 0
+
+        - name: Show validation error
+          fail:
+            msg: |
+              Bacula config validation failed! All changes have been rolled back.
+              Error: {{ validate_result.stdout }} {{ validate_result.stderr }}
+      when: validate_result.rc != 0
+
+    - name: Reload Bacula Director configuration
+      shell: 'echo "reload" | bconsole'
+      register: reload_result
+      failed_when: "'1000 OK' not in reload_result.stdout"
+      when: validate_result.rc == 0
+
+    # ==========================================
+    # Finaly report
+    # ==========================================
+    - name: Show job creation summary
+      debug:
+        msg: |
+          ========================================
+          JOB CREATION COMPLETED
+          ========================================
+          Job Name:         {{ job_name }}
+          Client:           {{ client_host }}-fd ({{ client_ip }})
+          Storage:          {{ storage_name }} ({{ storage_ip }})
+          FileSet:          {{ file_set_name }}
+          Schedule:         {{ schedule_name }}
+          Backup Level:     {{ job_level }}
+          Run String:       {{ run_string }}
+          ========================================
+          Job is ready for execution!
+          ========================================

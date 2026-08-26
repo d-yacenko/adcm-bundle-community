@@ -1,0 +1,29 @@
+---
+- name: Remove Bacula Storage Daemon from hosts
+  hosts: storage.storage.remove
+  become: yes
+  gather_facts: false
+
+  tasks:
+    - name: Stop Storage Daemon
+      service:
+        name: bacula-sd
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove Bacula Storage Daemon package
+      apt:
+        name: bacula-sd
+        state: absent
+        purge: yes
+
+    - name: Remove Bacula configuration directory
+      file:
+        path: /etc/bacula
+        state: absent
+
+    - name: Remove Bacula working directory
+      file:
+        path: /var/lib/bacula
+        state: absent
+

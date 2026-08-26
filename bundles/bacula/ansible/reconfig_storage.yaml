@@ -1,0 +1,214 @@
+---
+- name: Reconfigure Bacula Storage Daemon on all storage hosts
+  hosts: storage.storage
+  become: yes
+  gather_facts: false
+  vars:
+    bacula_sd_conf: "/etc/bacula/bacula-sd.conf"
+    
+    st_name: "{{ inventory_hostname }}_sd"
+    devices: "{{ services.storage.config.devices | default({'FileStorage-1': '/var/lib/bacula/volumes'}) }}"
+    
+    dir_host: "{{ groups['director.director'][0] }}"
+    bacula_dir_pw_adcm: "{{ hostvars[dir_host]['services']['director']['config']['bacula_dir_pw'] }}"
+    
+    bacula_dir_conf: "/etc/bacula/bacula-dir.conf"
+    storage_hosts: "{{ groups['storage.storage'] }}"
+
+  tasks:
+    # ==========================================
+    # Configuring the local bacula-sd.conf on each host
+    # ==========================================
+    - name: Debug storage configuration
+      debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Storage Name: {{ st_name }}"
+          - "Devices: {{ devices }}"
+
+    - name: Create device directories
+      file:
+        path: "{{ item.value }}"
+        state: directory
+        owner: bacula
+        group: bacula
+        mode: '0750'
+      loop: "{{ devices | dict2items }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item.key }}: {{ item.value }}"
+
+    - name: Overwrite bacula-sd.conf with empty content
+      copy:
+        dest: "{{ bacula_sd_conf }}"
+        content: |
+          #
+          # Bacula Storage Daemon Configuration - Managed by ADCM
+          # Host: {{ inventory_hostname }}
+          # Storage Name: {{ st_name }}
+          #
+        force: yes
+        owner: bacula
+        group: bacula
+        mode: '0640'
+
+    - name: Add Storage block
+      blockinfile:
+        path: "{{ bacula_sd_conf }}"
+        block: |
+          Storage {
+            Name = {{ st_name }}
+            SDPort = 9103
+            WorkingDirectory = "/var/lib/bacula"
+            PidDirectory = "/var/run/bacula"
+            Maximum Concurrent Jobs = 20
+          }
+        marker: "# {mark} STORAGE BLOCK"
+
+    - name: Add Device blocks
+      blockinfile:
+        path: "{{ bacula_sd_conf }}"
+        marker: "# {mark} DEVICE {{ item.key }}"
+        insertbefore: "^# BEGIN DIRECTOR BLOCK"
+        block: |
+          Device {
+            Name = {{ item.key }}
+            Media Type = File
+            Archive Device = {{ item.value }}
+            LabelMedia = yes
+            Random Access = yes
+            AutomaticMount = yes
+            RemovableMedia = no
+            AlwaysOpen = no
+          }
+      loop: "{{ devices | dict2items }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item.key }}"
+
+    - name: Add Director block
+      blockinfile:
+        path: "{{ bacula_sd_conf }}"
+        block: |
+          Director {
+            Name = {{ dir_host }}-dir
+            Password = "{{ bacula_dir_pw_adcm }}"
+          }
+        marker: "# {mark} DIRECTOR BLOCK"
+
+    - name: Add Messages block
+      blockinfile:
+        path: "{{ bacula_sd_conf }}"
+        block: |
+          Messages {
+            Name = Standard
+            director = {{ dir_host }}-dir = all
+          }
+        marker: "# {mark} MESSAGES BLOCK"
+
+    - name: Validate bacula-sd.conf syntax
+      command: bacula-sd -t
+      register: validate_result
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Restart Storage Daemon
+      service:
+        name: bacula-sd
+        state: restarted
+        enabled: yes
+      ignore_errors: yes
+
+    # ==========================================
+    # Updating the Director config
+    # ==========================================
+    - name: Debug storage hosts for Director update
+      debug:
+        msg: "Storage hosts: {{ storage_hosts }}"
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Remove all existing ANSIBLE MANAGED STORAGE blocks
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED STORAGE {{ item }}_sd"
+        state: absent
+      loop: "{{ storage_hosts }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Add Storage blocks to Director for each storage host
+      blockinfile:
+        path: "{{ bacula_dir_conf }}"
+        marker: "# {mark} ANSIBLE MANAGED STORAGE {{ item }}_sd"
+        insertbefore: "^# BEGIN POOL BLOCK"
+        block: |
+          Storage {
+            Name = {{ item }}_sd
+            Address = {{ hostvars[item].ansible_host }}
+            SDPort = 9103
+            Password = "{{ hostvars[item].services.director.config.bacula_dir_pw }}"
+            Device = {{ hostvars[item].services.storage.config.devices | default({'FileStorage-1': '/var/lib/bacula/volumes'}) | dict2items | map(attribute='key') | join(', ') }}
+            Media Type = File
+          }
+      loop: "{{ storage_hosts }}"
+      loop_control:
+        loop_var: item
+        label: "{{ item }}"
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Validate Director configuration
+      shell: "bacula-dir -t -c {{ bacula_dir_conf }}"
+      register: validate_result
+      changed_when: false
+      failed_when: false
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Rollback on validation failure
+      block:
+        - name: Remove added Storage blocks
+          blockinfile:
+            path: "{{ bacula_dir_conf }}"
+            marker: "# {mark} ANSIBLE MANAGED STORAGE {{ item }}_sd"
+            state: absent
+          loop: "{{ storage_hosts }}"
+          loop_control:
+            loop_var: item
+            label: "{{ item }}"
+
+        - name: Fail with error message
+          fail:
+            msg: |
+              Director config validation failed! Changes rolled back.
+              Error: {{ validate_result.stdout }} {{ validate_result.stderr }}
+      when: validate_result.rc != 0
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Reload Director configuration
+      shell: 'echo "reload" | bconsole'
+      register: reload_result
+      failed_when: "'1000 OK' not in reload_result.stdout"
+      when: validate_result.rc == 0
+      run_once: true
+      delegate_to: "{{ dir_host }}"
+
+    - name: Show reconfiguration summary
+      debug:
+        msg: |
+          ========================================
+          Storage reconfiguration completed!
+          ========================================
+          Storage hosts processed: {{ storage_hosts | length }}
+          {% for host in storage_hosts %}
+          - {{ host }}: {{ host }}_sd
+            IP: {{ hostvars[host].ansible_host }}
+            Devices: {{ hostvars[host].services.storage.config.devices | default({'FileStorage-1': '/var/lib/bacula/volumes'}) | dict2items | map(attribute='key') | join(', ') }}
+          {% endfor %}
+          ========================================
+      run_once: true
