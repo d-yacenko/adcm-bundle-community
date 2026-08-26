@@ -4,7 +4,7 @@
   gather_facts: yes
   vars:
     webssh_port: "{{ services.webssh.config.port }}"
-    webssh_address: "{{ services.webssh.config.listen_address }}"
+    webssh_address: "{{ services.webssh.config.listen_address | default('0.0.0.0') }}"
     webssh_service: "{{ services.webssh.config.systemd_unit }}"
   tasks:
     - name: Wait until apt/dpkg locks are free
@@ -28,17 +28,18 @@
 
     - name: Install WebSSH Python package via pip
       pip:
-        name: webssh==1.6.3
+        name: webssh
         state: present
         executable: pip3
 
     - name: Create unprivileged WebSSH service account
       user:
         name: webssh
-        system: true
-        create_home: true
+        system: yes
         home: /var/lib/webssh
+        create_home: yes
         shell: /usr/sbin/nologin
+        state: present
 
     - name: Create systemd unit for WebSSH
       template:
@@ -69,4 +70,3 @@
         component_id: "{{ services.webssh.TTY.component_id }}"
         host_id: "{{ adcm_hostid }}"
         token: "{{ env.status_api_token }}"
-
