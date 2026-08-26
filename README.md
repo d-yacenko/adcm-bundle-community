@@ -91,7 +91,7 @@ adcm-bundle-community/
 
 ## 💬 Сообщество
 
-- 💬 [Telegram](https://t.me/adcm_community)
+- 💬 [Telegram](https://t.me/adcm_bundle_community)
 - 🔀 [Pull requests](https://github.com/d-yacenko/adcm-bundle-community/pulls)
 
 ## 🔗 Связанные репозитории
