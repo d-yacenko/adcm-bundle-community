@@ -1,0 +1,46 @@
+<p><strong>Keycloak web interfaces</strong></p>
+<ul>
+{% if (kc_hostname | length) > 0 %}
+  {% set kc_base = kc_hostname | regex_replace('/+$', '') %}
+  <li><a href="{{ kc_base }}/admin" target="_blank" rel="noopener noreferrer">{{ kc_base }}/admin</a> — administrator console</li>
+{% elif (groups.get('keycloak.keycloak_server', []) | length) > 0 %}
+{% for host in groups.get('keycloak.keycloak_server', []) | sort %}
+  {% set host_facts = hostvars[host] %}
+  {% set ipv4 = host_facts.get('ansible_default_ipv4') or {} %}
+  {% set ipv6 = host_facts.get('ansible_default_ipv6') or {} %}
+  {% set host_ip = ipv4.get('address') or ipv6.get('address') or host %}
+  <li><a href="http://{{ host_ip }}:{{ kc_http_port }}/admin" target="_blank" rel="noopener noreferrer">http://{{ host_ip }}:{{ kc_http_port }}/admin</a> — administrator console</li>
+{% endfor %}
+{% else %}
+  <li>No Keycloak hosts are mapped.</li>
+{% endif %}
+</ul>
+
+<p><strong>Keycloak</strong></p>
+<p>This bundle installs Keycloak and, optionally, PostgreSQL on ADCM cluster hosts. Multiple Keycloak nodes share the same database.</p>
+
+<p><strong>Installation parameters</strong></p>
+<ul>
+  <li>Keycloak version: {{ kc_version }}</li>
+  <li>Database mode: {{ cluster.config.database_mode }}</li>
+{% if cluster.config.database_mode == 'external' %}
+  <li>PostgreSQL: {{ cluster.config.database_host }}:{{ cluster.config.database_port }}/{{ cluster.config.database_name }}</li>
+{% else %}
+  <li>PostgreSQL: installed by the bundle</li>
+{% endif %}
+</ul>
+
+<p><strong>Actions</strong></p>
+<ul>
+  <li><strong>Install</strong> — installs Keycloak on the selected hosts and PostgreSQL when the postgresql component is mapped.</li>
+  <li><strong>Add Keycloak server</strong> — adds another Keycloak node on the selected hosts and connects it to the shared database.</li>
+</ul>
+
+<p><strong>Services</strong></p>
+<ul>
+  <li><strong>keycloak</strong> — required service, component keycloak_server, one or more hosts.</li>
+  <li><strong>postgres</strong> — optional service, component postgresql, zero or one host.</li>
+</ul>
+
+<p><strong>Database</strong></p>
+<p>In internal mode PostgreSQL is installed by the bundle. In external mode an existing PostgreSQL server is used and its address is set in the cluster configuration.</p>

@@ -1,0 +1,193 @@
+---
+- name: Install and configure PostgreSQL
+  hosts: postgres.postgresql
+  become: true
+  gather_facts: true
+  serial: 1
+
+  tasks:
+    - name: Skip PostgreSQL installation when an external database is used
+      ansible.builtin.meta: end_play
+      when: cluster.config.database_mode != 'internal'
+
+    - name: Check that the operating system is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family in ['Debian', 'RedHat']
+        fail_msg: >-
+          Unsupported OS family "{{ ansible_os_family }}". This bundle supports
+          Debian and RedHat based distributions.
+
+    - name: Validate database settings
+      ansible.builtin.assert:
+        that:
+          - (cluster.config.database_port | int) > 0
+          - (cluster.config.database_name | length) > 0
+          - (cluster.config.database_user | length) > 0
+          - (cluster.config.database_password | length) > 0
+        fail_msg: >-
+          database_port, database_name, database_user and database_password
+          must be set on the cluster.
+
+    - name: Update the APT cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+
+    - name: Install PostgreSQL packages
+      ansible.builtin.package:
+        name: "{{ ['postgresql', 'postgresql-contrib'] if ansible_os_family == 'Debian' else ['postgresql-server', 'postgresql-contrib'] }}"
+        state: present
+
+    - name: Initialize the PostgreSQL data directory (RedHat)
+      ansible.builtin.command:
+        cmd: postgresql-setup --initdb
+      args:
+        creates: /var/lib/pgsql/data/PG_VERSION
+      when: ansible_os_family == 'RedHat'
+
+    - name: Ensure PostgreSQL is enabled and running
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: true
+
+    - name: Get the PostgreSQL server version
+      ansible.builtin.command:
+        argv:
+          - runuser
+          - -u
+          - postgres
+          - --
+          - psql
+          - -tAc
+          - SHOW server_version_num
+      register: pg_server_version
+      changed_when: false
+
+    - name: Require PostgreSQL 12 or newer
+      ansible.builtin.assert:
+        that:
+          - (pg_server_version.stdout | int) >= 120000
+        fail_msg: >-
+          PostgreSQL 12 or newer is required (found server_version_num
+          {{ pg_server_version.stdout }}).
+
+    - name: Get the PostgreSQL configuration file path
+      ansible.builtin.command:
+        argv:
+          - runuser
+          - -u
+          - postgres
+          - --
+          - psql
+          - -tAc
+          - SHOW config_file
+      register: pg_config_file
+      changed_when: false
+      failed_when: pg_config_file.rc != 0
+
+    - name: Get the PostgreSQL hba file path
+      ansible.builtin.command:
+        argv:
+          - runuser
+          - -u
+          - postgres
+          - --
+          - psql
+          - -tAc
+          - SHOW hba_file
+      register: pg_hba_file
+      changed_when: false
+      failed_when: pg_hba_file.rc != 0
+
+    - name: Configure postgresql.conf
+      ansible.builtin.lineinfile:
+        path: "{{ pg_config_file.stdout | trim }}"
+        regexp: '^\s*#?\s*{{ item.key }}\s*='
+        line: "{{ item.key }} = {{ item.value }}"
+        state: present
+      loop:
+        - key: listen_addresses
+          value: "'*'"
+        - key: port
+          value: "{{ cluster.config.database_port }}"
+        - key: max_connections
+          value: "{{ services['postgres']['config']['postgres_max_connections'] }}"
+        - key: shared_buffers
+          value: "'{{ services['postgres']['config']['postgres_shared_buffers'] }}'"
+        - key: effective_cache_size
+          value: "'{{ services['postgres']['config']['postgres_effective_cache_size'] }}'"
+        - key: password_encryption
+          value: "'scram-sha-256'"
+      notify: Restart PostgreSQL
+
+    - name: Allow password authentication from cluster hosts
+      ansible.builtin.blockinfile:
+        path: "{{ pg_hba_file.stdout | trim }}"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK: keycloak"
+        insertbefore: BOF
+        block: |
+          # Keycloak bundle: password authentication for cluster hosts.
+          host    all             all             0.0.0.0/0               scram-sha-256
+          host    all             all             ::/0                    scram-sha-256
+      notify: Restart PostgreSQL
+
+    - name: Apply the PostgreSQL configuration
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for PostgreSQL to accept connections
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ cluster.config.database_port }}"
+        timeout: 120
+
+    - name: Render the database initialization SQL
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/postgres-init.sql.j2"
+        dest: /tmp/keycloak-db-init.sql
+        owner: postgres
+        group: postgres
+        mode: '0600'
+      no_log: true
+
+    - name: Create the Keycloak role and database
+      ansible.builtin.command:
+        argv:
+          - runuser
+          - -u
+          - postgres
+          - --
+          - psql
+          - -v
+          - ON_ERROR_STOP=1
+          - -f
+          - /tmp/keycloak-db-init.sql
+      changed_when: true
+      no_log: true
+
+    - name: Remove the database initialization SQL
+      ansible.builtin.file:
+        path: /tmp/keycloak-db-init.sql
+        state: absent
+
+    - name: Verify that the database exists
+      ansible.builtin.command:
+        argv:
+          - runuser
+          - -u
+          - postgres
+          - --
+          - psql
+          - -tAc
+          - "SELECT 1 FROM pg_database WHERE datname = '{{ cluster.config.database_name }}'"
+      register: pg_database_check
+      changed_when: false
+      failed_when: (pg_database_check.stdout | trim) != '1'
+
+  handlers:
+    - name: Restart PostgreSQL
+      ansible.builtin.service:
+        name: postgresql
+        state: restarted

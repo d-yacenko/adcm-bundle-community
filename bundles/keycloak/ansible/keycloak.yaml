@@ -1,0 +1,333 @@
+---
+# Prerequisites are installed in a separate play without `serial`, so Java and
+# archive tools are prepared in parallel on all Keycloak hosts. The stateful
+# Keycloak installation below remains serialized to initialize the database
+# schema safely.
+- name: Prepare Keycloak hosts
+  hosts: keycloak.keycloak_server
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Check that the operating system is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family in ['Debian', 'RedHat']
+        fail_msg: >-
+          Unsupported OS family "{{ ansible_os_family }}". This bundle supports
+          Debian and RedHat based distributions.
+
+    - name: Check whether Java 17 is already installed (Debian)
+      ansible.builtin.command:
+        cmd: dpkg-query -W -f='${Status}' openjdk-17-jre-headless
+      register: kc_java_deb
+      changed_when: false
+      failed_when: false
+      when: ansible_os_family == 'Debian'
+
+    - name: Install Java and archive tools (Debian)
+      ansible.builtin.apt:
+        name:
+          - tar
+          - gzip
+          - ca-certificates
+          - openjdk-17-jre-headless
+        state: present
+        update_cache: "{{ 'install ok installed' not in (kc_java_deb.stdout | default('')) }}"
+        cache_valid_time: 3600
+        lock_timeout: 300
+      when: ansible_os_family == 'Debian'
+
+    - name: Check whether Java 17 is already installed (RedHat)
+      ansible.builtin.command:
+        cmd: rpm -q java-17-openjdk-headless
+      register: kc_java_rpm
+      changed_when: false
+      failed_when: false
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install Java and archive tools (RedHat)
+      ansible.builtin.package:
+        name:
+          - tar
+          - gzip
+          - ca-certificates
+          - java-17-openjdk-headless
+        state: present
+      when:
+        - ansible_os_family == 'RedHat'
+        - (kc_java_rpm.rc | default(1)) != 0
+
+- name: Install and configure Keycloak
+  hosts: keycloak.keycloak_server
+  become: true
+  gather_facts: false
+  # The first node creates the database schema, the next ones only connect to
+  # the already initialized database.  This avoids concurrent schema migration.
+  serial: 1
+
+  vars:
+    kc_cfg: "{{ services['keycloak']['config'] }}"
+    # The Keycloak version is fixed for this bundle version.
+    kc_version: "26.0.8"
+    kc_distribution_checksum: "sha256:8cf143b894afcf7d3be4549dc5af4790bda63bd471a5ac8e384094fb729e4b15"
+    kc_http_port: "{{ kc_cfg['keycloak_http_port'] | int }}"
+    kc_management_port: "{{ kc_cfg['keycloak_management_port'] | int }}"
+    kc_hostname: "{{ kc_cfg['keycloak_hostname'] }}"
+    kc_admin_user: "{{ kc_cfg['keycloak_admin_user'] }}"
+    kc_admin_password: "{{ kc_cfg['keycloak_admin_password'] }}"
+    kc_java_opts: "{{ kc_cfg['keycloak_java_opts'] }}"
+    kc_log_level: "{{ kc_cfg['keycloak_log_level'] }}"
+
+  tasks:
+    - name: Validate Keycloak ports
+      ansible.builtin.assert:
+        that:
+          - (kc_http_port | int) > 0
+          - (kc_management_port | int) > 0
+          - kc_http_port != kc_management_port
+        fail_msg: >-
+          keycloak_http_port and keycloak_management_port must be different
+          positive ports.
+
+    - name: Validate database settings
+      ansible.builtin.assert:
+        that:
+          - cluster.config.database_mode in ['internal', 'external']
+          - (cluster.config.database_port | int) > 0
+          - (cluster.config.database_name | length) > 0
+          - (cluster.config.database_user | length) > 0
+          - (cluster.config.database_password | length) > 0
+        fail_msg: >-
+          database_mode, database_port, database_name, database_user and
+          database_password must be set on the cluster.
+
+    - name: Resolve the database host
+      ansible.builtin.set_fact:
+        kc_db_host: >-
+          {{ cluster.config.database_host
+             if cluster.config.database_mode == 'external'
+             else ((groups.get('postgres.postgresql', []) | first) | default('', true)) }}
+
+    - name: Check the internal PostgreSQL mapping
+      ansible.builtin.fail:
+        msg: >-
+          database_mode is internal, but no host is mapped to
+          postgres.postgresql. Add the PostgreSQL service and map its component
+          during Install, or switch database_mode to external.
+      when:
+        - cluster.config.database_mode == 'internal'
+        - (kc_db_host | length) == 0
+
+    - name: Check the external PostgreSQL host
+      ansible.builtin.fail:
+        msg: >-
+          database_mode is external, but database_host is empty. Set
+          database_host to the DNS name or IP address of the external
+          PostgreSQL server.
+      when:
+        - cluster.config.database_mode == 'external'
+        - (cluster.config.database_host | length) == 0
+
+    - name: Wait for PostgreSQL to accept connections
+      ansible.builtin.wait_for:
+        host: "{{ kc_db_host }}"
+        port: "{{ cluster.config.database_port | int }}"
+        timeout: 300
+
+    - name: Create the Keycloak group
+      ansible.builtin.group:
+        name: keycloak
+        system: true
+
+    - name: Create the Keycloak user
+      ansible.builtin.user:
+        name: keycloak
+        group: keycloak
+        system: true
+        create_home: false
+        home: /var/lib/keycloak
+        shell: /sbin/nologin
+
+    - name: Create Keycloak directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - path: /etc/keycloak
+          owner: root
+          group: keycloak
+          mode: '0750'
+        - path: /var/lib/keycloak
+          owner: keycloak
+          group: keycloak
+          mode: '0750'
+        - path: /var/log/keycloak
+          owner: keycloak
+          group: keycloak
+          mode: '0750'
+
+    - name: Check whether the selected Keycloak version is installed
+      ansible.builtin.stat:
+        path: "/opt/keycloak-{{ kc_version }}"
+      register: kc_dist
+
+    - name: Download Keycloak
+      ansible.builtin.get_url:
+        url: "https://github.com/keycloak/keycloak/releases/download/{{ kc_version }}/keycloak-{{ kc_version }}.tar.gz"
+        dest: "/tmp/keycloak-{{ kc_version }}.tar.gz"
+        checksum: "{{ kc_distribution_checksum }}"
+        mode: '0644'
+        timeout: 120
+      register: kc_download
+      until: kc_download is succeeded
+      retries: 3
+      delay: 5
+      when: not kc_dist.stat.exists
+
+    - name: Extract Keycloak
+      ansible.builtin.unarchive:
+        src: "/tmp/keycloak-{{ kc_version }}.tar.gz"
+        dest: /opt
+        remote_src: true
+        creates: "/opt/keycloak-{{ kc_version }}"
+      when: not kc_dist.stat.exists
+
+    - name: Set Keycloak installation ownership
+      ansible.builtin.file:
+        path: "/opt/keycloak-{{ kc_version }}"
+        state: directory
+        recurse: true
+        owner: keycloak
+        group: keycloak
+
+    - name: Check the /opt/keycloak path
+      ansible.builtin.stat:
+        path: /opt/keycloak
+        follow: false
+      register: kc_opt
+
+    - name: Refuse to overwrite a non-symlink /opt/keycloak
+      ansible.builtin.fail:
+        msg: >-
+          /opt/keycloak exists and is not a symlink. Remove the existing
+          Keycloak installation manually or choose another installation
+          directory.
+      when:
+        - kc_opt.stat.exists
+        - not (kc_opt.stat.islnk | default(false))
+
+    - name: Point /opt/keycloak to the selected version
+      ansible.builtin.file:
+        src: "/opt/keycloak-{{ kc_version }}"
+        dest: /opt/keycloak
+        state: link
+        force: true
+
+    - name: Remove the Keycloak archive
+      ansible.builtin.file:
+        path: "/tmp/keycloak-{{ kc_version }}.tar.gz"
+        state: absent
+
+    - name: Configure Keycloak
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/keycloak.conf.j2"
+        dest: /opt/keycloak/conf/keycloak.conf
+        owner: keycloak
+        group: keycloak
+        mode: '0640'
+      register: kc_conf
+
+    - name: Configure Keycloak environment
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/keycloak.env.j2"
+        dest: /etc/keycloak/keycloak.env
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+      notify: Restart Keycloak
+
+    - name: Install the Keycloak systemd unit
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/keycloak.service.j2"
+        dest: /etc/systemd/system/keycloak.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart Keycloak
+
+    - name: Check the Keycloak build marker
+      ansible.builtin.stat:
+        path: "/var/lib/keycloak/.build-{{ kc_version }}"
+      register: kc_build_marker
+
+    - name: Build the Keycloak optimized image
+      ansible.builtin.command:
+        argv:
+          - runuser
+          - -u
+          - keycloak
+          - --
+          - /opt/keycloak/bin/kc.sh
+          - build
+        chdir: /opt/keycloak
+      environment:
+        HOME: /var/lib/keycloak
+      register: kc_build
+      changed_when: true
+      when: kc_conf.changed or not kc_build_marker.stat.exists
+      notify: Restart Keycloak
+
+    - name: Mark the Keycloak build as complete
+      ansible.builtin.file:
+        path: "/var/lib/keycloak/.build-{{ kc_version }}"
+        state: touch
+        owner: keycloak
+        group: keycloak
+        mode: '0640'
+      when: kc_build.changed | default(false)
+
+    - name: Ensure Keycloak is enabled and running
+      ansible.builtin.systemd:
+        name: keycloak
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Apply pending Keycloak service changes
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for Keycloak to become ready
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ kc_management_port }}/health/ready"
+        status_code:
+          - 200
+          - 503
+        timeout: 10
+      register: kc_health
+      until: kc_health.status == 200
+      retries: 120
+      delay: 5
+
+    - name: Check that the Keycloak service is active
+      ansible.builtin.command:
+        cmd: systemctl is-active keycloak
+      register: kc_service_state
+      changed_when: false
+      failed_when: (kc_service_state.stdout | trim) != 'active'
+
+  handlers:
+    - name: Restart Keycloak
+      ansible.builtin.systemd:
+        name: keycloak
+        state: restarted
+        daemon_reload: true
+
+# This play runs after Keycloak is installed (and after every "Add Keycloak
+# server"). It replaces the static Bundle Info HTML with a page whose first
+# block is the list of Keycloak web interface addresses.
+- import_playbook: bundle_info.yaml

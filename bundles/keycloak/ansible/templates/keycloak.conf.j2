@@ -1,0 +1,23 @@
+# Managed by the ADCM Keycloak bundle. Keycloak {{ kc_version }}.
+db=postgres
+db-url=jdbc:postgresql://{{ kc_db_host }}:{{ cluster.config.database_port }}/{{ cluster.config.database_name }}?sslmode={{ cluster.config.database_ssl_mode }}
+db-username={{ cluster.config.database_user }}
+
+http-enabled=true
+http-host=0.0.0.0
+http-port={{ kc_http_port }}
+http-management-port={{ kc_management_port }}
+health-enabled=true
+
+hostname-strict={{ 'true' if (kc_hostname | length) > 0 else 'false' }}
+{% if (kc_hostname | length) > 0 %}
+hostname={{ kc_hostname }}
+{% endif %}
+proxy-headers=xforwarded
+
+# Every Keycloak instance is an independent standalone server connected to the
+# same database. Use a load balancer with sticky sessions in front of them.
+cache=local
+
+log=console
+log-level={{ kc_log_level }}

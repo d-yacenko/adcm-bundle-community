@@ -1,0 +1,42 @@
+---
+# Renders the Bundle Info HTML page and saves it into the cluster's hidden
+# `__main_info` parameter. The page starts with the Keycloak web interface
+# addresses; the rest is the bundle description.
+
+# Network facts are needed to show IP addresses instead of inventory FQDNs.
+# They are already collected by the Keycloak play; on the upgrade path this
+# play collects them when they are missing.
+- name: Gather network facts for Keycloak hosts
+  hosts: keycloak.keycloak_server
+  gather_facts: false
+
+  tasks:
+    - name: Gather network facts if they are not available
+      ansible.builtin.setup:
+        gather_subset:
+          - "!all"
+          - network
+      when: ansible_default_ipv4 is not defined
+
+- name: Publish Keycloak web interfaces in Bundle Info
+  hosts: all
+  connection: local
+  gather_facts: false
+
+  vars:
+    kc_cfg: "{{ services.get('keycloak', {}).get('config', {}) }}"
+    kc_version: "26.0.8"
+    kc_http_port: "{{ kc_cfg.get('keycloak_http_port', 8080) | int }}"
+    kc_hostname: "{{ kc_cfg.get('keycloak_hostname', '') }}"
+
+  tasks:
+    - name: Render Bundle Info HTML
+      ansible.builtin.set_fact:
+        kc_bundle_info_html: "{{ lookup('ansible.builtin.template', 'bundle_info.html.j2') }}"
+
+    - name: Save Bundle Info HTML to the cluster
+      adcm_config:
+        type: cluster
+        key: __main_info
+        value: "{{ kc_bundle_info_html }}"
+      run_once: true

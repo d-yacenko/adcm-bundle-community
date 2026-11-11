@@ -1,0 +1,18 @@
+{% set db_user = cluster.config.database_user %}
+{% set db_password = cluster.config.database_password %}
+{% set db_name = cluster.config.database_name %}
+DO $do$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{{ db_user | replace("'", "''") }}') THEN
+        CREATE ROLE "{{ db_user | replace('"', '""') }}" LOGIN PASSWORD '{{ db_password | replace("'", "''") }}';
+    ELSE
+        ALTER ROLE "{{ db_user | replace('"', '""') }}" WITH LOGIN PASSWORD '{{ db_password | replace("'", "''") }}';
+    END IF;
+END
+$do$;
+
+SELECT 'CREATE DATABASE "{{ db_name | replace('"', '""') }}" OWNER "{{ db_user | replace('"', '""') }}"'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{{ db_name | replace("'", "''") }}') \gexec
+
+ALTER DATABASE "{{ db_name | replace('"', '""') }}" OWNER TO "{{ db_user | replace('"', '""') }}";
+GRANT ALL PRIVILEGES ON DATABASE "{{ db_name | replace('"', '""') }}" TO "{{ db_user | replace('"', '""') }}";
