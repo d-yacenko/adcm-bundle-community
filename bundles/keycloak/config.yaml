@@ -11,7 +11,7 @@
   name: keycloak
   display_name: Keycloak
   description: Keycloak identity and access management server with PostgreSQL
-  version: '1.0.0'
+  version: 1.0.0
   edition: community
   adcm_min_version: 2.11.0
   contract_version: '2.1'
