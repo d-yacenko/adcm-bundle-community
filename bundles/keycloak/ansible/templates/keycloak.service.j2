@@ -1,0 +1,21 @@
+[Unit]
+Description=Keycloak
+Documentation=https://www.keycloak.org/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=keycloak
+Group=keycloak
+WorkingDirectory=/opt/keycloak
+Environment=HOME=/var/lib/keycloak
+EnvironmentFile=-/etc/keycloak/keycloak.env
+ExecStart=/opt/keycloak/bin/kc.sh start --optimized
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=600
+LimitNOFILE=102400
+
+[Install]
+WantedBy=multi-user.target

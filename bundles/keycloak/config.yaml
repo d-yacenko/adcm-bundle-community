@@ -1,0 +1,276 @@
+---
+# Keycloak bundle for ADCM.
+#
+# The bundle contains two services:
+#   * keycloak  - the Keycloak server (one or more instances, required);
+#   * postgres  - PostgreSQL for Keycloak (optional, at most one instance).
+#
+# The database connection settings are defined on the cluster level because
+# both services have to use exactly the same values.
+- type: cluster
+  name: keycloak
+  display_name: Keycloak
+  description: Keycloak identity and access management server with PostgreSQL
+  version: 1.0.0
+  edition: community
+  adcm_min_version: 2.11.0
+  contract_version: '2.1'
+  venv: '2.16'
+
+  config:
+    - name: database_mode
+      display_name: Database mode
+      description: >-
+        Internal means that PostgreSQL is installed by this bundle on the host
+        where the postgres.postgresql component is mapped. External means that
+        an already existing PostgreSQL server is used.
+      type: option
+      option:
+        internal: internal
+        external: external
+      default: internal
+      required: true
+
+    - name: database_host
+      display_name: External PostgreSQL host
+      description: >-
+        DNS name or IP address of an external PostgreSQL server. Must be set
+        when database_mode is external. Ignored in internal mode.
+      type: string
+      default: ''
+      required: false
+
+    - name: database_port
+      display_name: PostgreSQL port
+      type: integer
+      default: 5432
+      min: 1
+      max: 65535
+      required: true
+
+    - name: database_name
+      display_name: Database name
+      type: string
+      default: keycloak
+      required: true
+
+    - name: database_user
+      display_name: Database user
+      type: string
+      default: keycloak
+      required: true
+
+    - name: database_password
+      display_name: Database password
+      description: >-
+        Password of the database user. It is also used when the bundle installs
+        PostgreSQL.
+      type: password
+      required: true
+
+    - name: database_ssl_mode
+      display_name: Database SSL mode
+      description: JDBC sslmode parameter used by Keycloak.
+      type: option
+      option:
+        disable: disable
+        allow: allow
+        prefer: prefer
+        require: require
+        verify-ca: verify-ca
+        verify-full: verify-full
+      default: prefer
+      required: true
+
+    # Special ADCM parameter: its value is rendered as the bundle/cluster
+    # "Bundle info" HTML block. It is invisible in the configuration form.
+    - name: __main_info
+      type: string
+      required: false
+      default: |
+        <p><strong>Keycloak</strong></p>
+        <p>This bundle installs Keycloak and, optionally, PostgreSQL on ADCM cluster hosts.</p>
+        <p><strong>Actions</strong></p>
+        <ul>
+          <li><strong>Install</strong> вЂ” installs Keycloak on the selected hosts and PostgreSQL when the postgresql component is mapped.</li>
+          <li><strong>Add Keycloak server</strong> вЂ” adds another Keycloak node on the selected hosts and connects it to the shared database.</li>
+        </ul>
+        <p><strong>Services</strong></p>
+        <ul>
+          <li><strong>keycloak</strong> вЂ” required service, component keycloak_server, one or more hosts.</li>
+          <li><strong>postgres</strong> вЂ” optional service, component postgresql, zero or one host.</li>
+        </ul>
+        <p><strong>Database</strong></p>
+        <p>In internal mode PostgreSQL is installed by the bundle. In external mode an existing PostgreSQL server is used and its address is set in the cluster configuration.</p>
+        <p>After installation, the Keycloak web interface addresses will appear here.</p>
+
+  actions:
+    install:
+      display_name: Install
+      description: >-
+        Install Keycloak on all hosts selected for the keycloak_server
+        component. If the PostgreSQL component is mapped, install and configure
+        PostgreSQL on its host first. Every Keycloak instance is configured to
+        use the same database.
+      allow_to_terminate: false
+      masking:
+        state:
+          available:
+            - created
+      on_success:
+        state: installed
+      on_fail:
+        state: created
+      hc_acl:
+        - service: keycloak
+          component: keycloak_server
+          action: add
+        - service: postgres
+          component: postgresql
+          action: add
+      scripts:
+        - name: install_postgresql
+          display_name: Install PostgreSQL
+          script: ansible/postgres.yaml
+          script_type: ansible
+        - name: install_keycloak
+          display_name: Install Keycloak
+          script: ansible/keycloak.yaml
+          script_type: ansible
+
+    add_keycloak_server:
+      display_name: Add Keycloak server
+      description: >-
+        Install one more Keycloak server on the selected hosts and connect it to
+        the database that is already used by the cluster. The action is
+        available after a successful Install.
+      allow_to_terminate: false
+      masking:
+        state:
+          available:
+            - installed
+      on_success:
+        state: installed
+      hc_acl:
+        - service: keycloak
+          component: keycloak_server
+          action: add
+      scripts:
+        - name: add_keycloak_server
+          display_name: Add Keycloak server
+          script: ansible/keycloak.yaml
+          script_type: ansible
+
+- type: service
+  name: keycloak
+  display_name: Keycloak
+  description: Keycloak server
+  version: '26.0.8-1.0.0'
+  required: true
+  config:
+    - name: keycloak_http_port
+      display_name: HTTP port
+      type: integer
+      default: 8080
+      min: 1
+      max: 65535
+      required: true
+
+    - name: keycloak_management_port
+      display_name: Management port
+      description: Port for Keycloak health and metrics endpoints.
+      type: integer
+      default: 9000
+      min: 1
+      max: 65535
+      required: true
+
+    - name: keycloak_hostname
+      display_name: Public hostname
+      description: >-
+        Optional public URL of Keycloak, for example
+        https://keycloak.example.com. Set it when Keycloak is placed behind a
+        load balancer or a reverse proxy. Leave empty to accept the request
+        host.
+      type: string
+      default: ''
+      required: false
+
+    - name: keycloak_admin_user
+      display_name: Bootstrap admin user
+      type: string
+      default: admin
+      required: true
+
+    - name: keycloak_admin_password
+      display_name: Bootstrap admin password
+      description: >-
+        Password of the initial master-realm administrator. It is applied only
+        when the first Keycloak instance creates the database schema.
+      type: password
+      required: true
+
+    - name: keycloak_java_opts
+      display_name: Java options
+      type: string
+      default: '-Xms512m -Xmx1024m'
+      required: true
+
+    - name: keycloak_log_level
+      display_name: Log level
+      type: option
+      option:
+        INFO: INFO
+        WARN: WARN
+        ERROR: ERROR
+        DEBUG: DEBUG
+      default: INFO
+      required: true
+
+  components:
+    keycloak_server:
+      display_name: Keycloak Server
+      description: A Keycloak server instance.
+      constraint:
+        - 1
+        - +
+
+
+- type: service
+  name: postgres
+  display_name: PostgreSQL
+  description: PostgreSQL database for Keycloak
+  version: '26.0.8-1.0.0'
+  required: false
+
+  config:
+    - name: postgres_max_connections
+      display_name: max_connections
+      description: Maximum number of PostgreSQL connections.
+      type: integer
+      default: 200
+      min: 10
+      max: 10000
+      required: true
+
+    - name: postgres_shared_buffers
+      display_name: shared_buffers
+      description: PostgreSQL shared_buffers value, for example 256MB.
+      type: string
+      default: 256MB
+      required: true
+
+    - name: postgres_effective_cache_size
+      display_name: effective_cache_size
+      description: PostgreSQL effective_cache_size value, for example 1GB.
+      type: string
+      default: 1GB
+      required: true
+
+  components:
+    postgresql:
+      display_name: PostgreSQL Server
+      description: A single PostgreSQL server that stores the Keycloak database.
+      constraint:
+        - 0
+        - 1
